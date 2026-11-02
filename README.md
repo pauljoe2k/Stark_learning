@@ -335,11 +335,6 @@ Steps:
 - Shareable, read-only palaces for group study
 - Offline review mode
 
-## Team
-
-- **Backend and AI:** _name_
-- **Frontend and UX:** _name_
-
 ## License
 
-MIT (or choose your own).
+MIT.
