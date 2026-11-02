@@ -1,15 +1,21 @@
 /**
  * Pinpoint seed — demo account with a non-empty dashboard.
  *
- * Run:  npm run seed        (or: node prisma/seed.js)
+ * Run:  npx prisma db seed  (configured in prisma.config.mjs)
+ *   or: node prisma/seed.js
  *
  * Idempotent: the demo user is deleted (cascading to all their data) and rebuilt,
  * so you can re-run this as often as you like. It touches nothing else in the DB.
  */
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+// Prisma ORM 7: the client needs a driver adapter. Same wiring as src/lib/prisma.js,
+// duplicated here so the seed has no dependency on app code.
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 const DEMO_EMAIL = "demo@pinpoint.app";
 const DEMO_PASSWORD = "demo1234";
@@ -52,7 +58,10 @@ async function main() {
     { id: 3, text: "ATP and NADPH carry energy to the Calvin cycle" },
     { id: 4, text: "The Calvin cycle fixes CO2 into glucose" },
     { id: 5, text: "Stomata let CO2 in and water vapour out" },
-    { id: 6, text: "Limiting factors: light intensity, CO2 concentration, temperature" },
+    {
+      id: 6,
+      text: "Limiting factors: light intensity, CO2 concentration, temperature",
+    },
   ];
 
   const topic = await prisma.topic.create({
@@ -89,11 +98,31 @@ async function main() {
       score: 38,
       points: [
         { id: 1, status: "covered", feedback: "Chlorophyll mentioned." },
-        { id: 2, status: "incorrect", feedback: "Oxygen comes from splitting water, not from CO2." },
-        { id: 3, status: "missing", feedback: "Name the energy carriers ATP and NADPH." },
-        { id: 4, status: "partial", feedback: "Glucose mentioned but the Calvin cycle was not named." },
-        { id: 5, status: "missing", feedback: "Explain how gases enter and leave the leaf." },
-        { id: 6, status: "missing", feedback: "No limiting factors discussed." },
+        {
+          id: 2,
+          status: "incorrect",
+          feedback: "Oxygen comes from splitting water, not from CO2.",
+        },
+        {
+          id: 3,
+          status: "missing",
+          feedback: "Name the energy carriers ATP and NADPH.",
+        },
+        {
+          id: 4,
+          status: "partial",
+          feedback: "Glucose mentioned but the Calvin cycle was not named.",
+        },
+        {
+          id: 5,
+          status: "missing",
+          feedback: "Explain how gases enter and leave the leaf.",
+        },
+        {
+          id: 6,
+          status: "missing",
+          feedback: "No limiting factors discussed.",
+        },
       ],
       nextFocus: [2, 3, 5, 6],
       createdAt: minutesAgo(90),
@@ -109,11 +138,27 @@ async function main() {
       score: 83,
       points: [
         { id: 1, status: "covered", feedback: "Clear." },
-        { id: 2, status: "covered", feedback: "Water splitting and oxygen release both correct." },
-        { id: 3, status: "covered", feedback: "ATP and NADPH named correctly." },
-        { id: 4, status: "covered", feedback: "CO2 fixation into glucose explained." },
+        {
+          id: 2,
+          status: "covered",
+          feedback: "Water splitting and oxygen release both correct.",
+        },
+        {
+          id: 3,
+          status: "covered",
+          feedback: "ATP and NADPH named correctly.",
+        },
+        {
+          id: 4,
+          status: "covered",
+          feedback: "CO2 fixation into glucose explained.",
+        },
         { id: 5, status: "covered", feedback: "Stomata covered." },
-        { id: 6, status: "missing", feedback: "Still missing the limiting factors." },
+        {
+          id: 6,
+          status: "missing",
+          feedback: "Still missing the limiting factors.",
+        },
       ],
       nextFocus: [6],
       createdAt: minutesAgo(20),
@@ -128,7 +173,10 @@ async function main() {
       title: "Cell Respiration",
       notes: "Glycolysis, the Krebs cycle, and the electron transport chain.",
       keyPoints: [
-        { id: 1, text: "Glycolysis breaks glucose into pyruvate in the cytoplasm" },
+        {
+          id: 1,
+          text: "Glycolysis breaks glucose into pyruvate in the cytoplasm",
+        },
         { id: 2, text: "The Krebs cycle runs in the mitochondrial matrix" },
         { id: 3, text: "The electron transport chain builds most of the ATP" },
         { id: 4, text: "Oxygen is the final electron acceptor" },
@@ -144,7 +192,8 @@ async function main() {
     data: {
       userId: user.id,
       name: "Study desk",
-      imageUrl: "https://res.cloudinary.com/demo/image/upload/pinpoint/seed-desk.jpg",
+      imageUrl:
+        "https://res.cloudinary.com/demo/image/upload/pinpoint/seed-desk.jpg",
       storageKey: "pinpoint/seed-desk",
     },
   });
@@ -203,17 +252,42 @@ async function main() {
 
   await prisma.recallResult.createMany({
     data: [
-      { roundId: round.id, flagId: flag1.id, outcome: "green", secondsTaken: 6.4 },
-      { roundId: round.id, flagId: flag2.id, outcome: "green", secondsTaken: 11.9 },
-      { roundId: round.id, flagId: flag3.id, outcome: "red", secondsTaken: 15.0 },
+      {
+        roundId: round.id,
+        flagId: flag1.id,
+        outcome: "green",
+        secondsTaken: 6.4,
+      },
+      {
+        roundId: round.id,
+        flagId: flag2.id,
+        outcome: "green",
+        secondsTaken: 11.9,
+      },
+      {
+        roundId: round.id,
+        flagId: flag3.id,
+        outcome: "red",
+        secondsTaken: 15.0,
+      },
     ],
   });
 
   // --- 9. Exams: one close, one later (drives the countdown + calendar) ----
   await prisma.exam.createMany({
     data: [
-      { userId: user.id, unitId: unit.id, title: "Biology Mid-term", examDate: daysFromNow(12) },
-      { userId: user.id, unitId: unit.id, title: "Unit 3 Class Test", examDate: daysFromNow(26) },
+      {
+        userId: user.id,
+        unitId: unit.id,
+        title: "Biology Mid-term",
+        examDate: daysFromNow(12),
+      },
+      {
+        userId: user.id,
+        unitId: unit.id,
+        title: "Unit 3 Class Test",
+        examDate: daysFromNow(26),
+      },
     ],
   });
 
@@ -221,7 +295,7 @@ async function main() {
   console.log(`  login: ${DEMO_EMAIL}`);
   console.log(`  password: ${DEMO_PASSWORD}`);
   console.log(
-    `  topics: ${topic.title} (mastery 63, 2 attempts, 3 flags), ${topic2.title} (no material yet)`
+    `  topics: ${topic.title} (mastery 63, 2 attempts, 3 flags), ${topic2.title} (no material yet)`,
   );
 }
 

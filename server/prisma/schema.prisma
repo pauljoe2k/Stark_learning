@@ -1,20 +1,24 @@
-// Pinpoint — Prisma schema
-// Stack: PostgreSQL (Neon or Supabase), Prisma Client.
+// Pinpoint — Prisma schema (Prisma ORM 7)
+//
+// v7 changes vs v6, all reflected here:
+//   - datasource has NO url/directUrl. They live in prisma.config.mjs.
+//   - generator provider is the new Rust-free `prisma-client`, and `output` is required.
+//     The client is generated into server/generated/prisma, NOT node_modules.
+//   - Prisma Client must be constructed with a driver adapter (see src/lib/prisma.js).
+//   - Prisma ships as ESM: package.json needs "type": "module".
+//
 // Conventions:
 //   - Primary keys are cuid strings (non-guessable, safe in URLs).
 //   - Enum values are lowercase so DB values match the API JSON exactly (no mapping layer).
 //   - Every query in the API is scoped by userId; indexes below exist for the queries we actually run.
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  // Neon/Supabase: pooled URL for the app, direct URL for migrations.
-  // Set both in .env. If you use a single direct connection, set them to the same value.
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 // ---------------------------------------------------------------------------
