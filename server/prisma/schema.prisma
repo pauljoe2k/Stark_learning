@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(80)
+  email        String        @unique @db.VarChar(255)
+  passwordHash String
+  passMark     Int           @default(70)
+  units        Unit[]
+  topics       Topic[]
+  places       Place[]
+  recallRounds RecallRound[]
+  exams        Exam[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Unit {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @db.VarChar(120)
+  topics    Topic[]
+  exams     Exam[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Topic {
+  id             Int           @id @default(autoincrement())
+  userId         Int
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId         Int?
+  unit           Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  title          String        @db.VarChar(160)
+  notes          String        @default("") @db.Text
+  keyPoints      Json          @default("[]")
+  mastery        Int           @default(0)
+  topicFiles     TopicFile[]
+  explanations   Explanation[]
+  flags          Flag[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([unitId])
+}
+
+model TopicFile {
+  id        Int      @id @default(autoincrement())
+  topicId   Int
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  fileUrl   String
+  type      String   @db.VarChar(50)
+  pageCount Int
+  createdAt DateTime @default(now())
+
+  @@index([topicId])
+}
+
+model Explanation {
+  id          Int      @id @default(autoincrement())
+  topicId     Int
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  transcript  String   @db.Text
+  durationSec Int
+  score       Int
+  points      Json
+  summary     String   @db.Text
+  nextFocus   Json
+  createdAt   DateTime @default(now())
+
+  @@index([topicId, createdAt])
+}
+
+model Place {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(80)
+  imageUrl  String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flags     Flag[]
+  rounds    RecallRound[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Flag {
+  id         Int            @id @default(autoincrement())
+  placeId    Int
+  place      Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  topicId    Int?
+  topic      Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  keyPointId Int?
+  x          Float
+  y          Float
+  title      String         @db.VarChar(120)
+  note       String?        @db.VarChar(2000)
+  emoji      String?        @db.VarChar(8)
+  results    RecallResult[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([placeId])
+  @@index([topicId])
+}
+
+model RecallRound {
+  id            Int            @id @default(autoincrement())
+  userId        Int
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  placeId       Int
+  place         Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  timeLimitSec  Int
+  startedAt     DateTime       @default(now())
+  finishedAt    DateTime?
+  results       RecallResult[]
+
+  @@index([userId, startedAt])
+}
+
+model RecallResult {
+  id           Int         @id @default(autoincrement())
+  roundId      Int
+  round        RecallRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  flagId       Int
+  flag         Flag        @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  result       String      @db.VarChar(10)
+  secondsTaken Int
+  createdAt    DateTime    @default(now())
+
+  @@unique([roundId, flagId])
+  @@index([flagId])
+}
+
+model Exam {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId    Int?
+  unit      Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  title     String   @db.VarChar(160)
+  examDate  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, examDate])
+}

@@ -150,8 +150,8 @@ pinpoint/
 
 - Node.js 18 or later
 - A PostgreSQL database (a free Neon or Supabase project works well)
-- A Gemini API key from [Google AI Studio](https://aistudio.google.com)
-- A Cloudinary account (or Supabase Storage) for images and PDFs
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com) for document extraction
+- Cloudinary is optional; local uploads are stored in `server/uploads`
 - Chrome or Edge for voice input (other browsers can use typed explanations)
 
 > A Gemini app subscription is separate from API access. You need an API key from AI Studio.
@@ -163,33 +163,46 @@ git clone <your-repo-url>
 cd pinpoint
 ```
 
-### 2. Set up the server
+### 2. Install and configure
+
+```bash
+npm run install:all
+```
+
+Copy `server/.env.example` to `server/.env` and `client/.env.example` to `client/.env`. Set a valid PostgreSQL `DATABASE_URL` and a long random `JWT_SECRET` in `server/.env`. A Gemini API key is required for AI document extraction; Explain falls back to keyword matching when Gemini is unavailable. Cloudinary is optional for local development.
+
+### 3. Migrate, seed, and run
 
 ```bash
 cd server
-npm install
-cp .env.example .env     # then fill in the values (see below)
-npx prisma migrate dev
-npm run seed             # creates a demo account with sample data
+npx prisma migrate dev --name init
+npm run seed
 npm run dev
 ```
 
-The API runs on `http://localhost:4000` by default.
-
-### 3. Set up the client
+In a second terminal:
 
 ```bash
 cd client
-npm install
-cp .env.example .env     # set VITE_API_URL
 npm run dev
 ```
 
-The app runs on `http://localhost:5173`.
+The API runs at `http://localhost:4000`; Vite prints the client URL (normally `http://localhost:5173`).
 
-### 4. Try the demo account
+### 4. Demo and mock mode
 
-After seeding, log in with the demo credentials printed by the seed script. The demo account includes a sample topic, a place with flags, and an upcoming exam.
+The seed creates `demo@pinpoint.app` and `demo2@pinpoint.app`; the local demo password is `PinpointDemo123!`. Change these credentials before exposing a seeded environment publicly. The first demo account includes a sample topic, place, flags, and an upcoming exam.
+
+To run the client without the API or database, set `VITE_USE_MOCK=true` in `client/.env` and start Vite. The mock API keeps its sample data in memory.
+
+### Tests
+
+```bash
+cd server && npm test
+cd client && npm test && npm run build
+```
+
+With a migrated database and the API running, run `bash server/scripts/test-palace.sh` from the repository root for Palace HTTP integration checks.
 
 ## Environment variables
 
@@ -206,12 +219,15 @@ After seeding, log in with the demo credentials printed by the seed script. The 
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `DEV_USER_ID` | Local development account id when no bearer token is supplied (development only) |
+| `PUBLIC_URL` | Public origin for local uploads; defaults to localhost and `PORT` |
 
 ### Client (`client/.env`)
 
 | Variable | Description |
 |---|---|
 | `VITE_API_URL` | Base URL of the API (for example `http://localhost:4000`) |
+| `VITE_USE_MOCK` | Set to `true` for the in-memory sample API; defaults to `false` |
 
 > Never commit `.env` files. Add `.env` to `.gitignore` before your first commit, and never expose the Gemini key in client code.
 
