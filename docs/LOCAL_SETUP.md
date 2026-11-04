@@ -73,11 +73,13 @@ declared MIME type, size (20 MB), PDF page count, and the two-page/two-image
 limits before queuing extraction. Local storage is the default and is persisted
 in the `pinpoint-uploads` Compose volume (or `apps/api/uploads` without Docker).
 
-Set `GEMINI_API_KEY` in `apps/api/.env` or the environment for real extraction.
-Without a key, upload and job creation still work, but the worker reports an
-explicit extraction error instead of returning sample content. Cloudinary is
-optional; set `STORAGE_PROVIDER=cloudinary` and all three Cloudinary credentials
-to enable signed direct uploads.
+For `npm run dev:all`, set `GEMINI_API_KEY` in `apps/api/.env`. Docker Compose
+reads `GEMINI_API_KEY`, `STORAGE_PROVIDER`, and Cloudinary credentials from the
+project-root `.env` file or the shell environment; recreate the API and worker
+after changing them. Without a Gemini key, upload and job creation still work,
+but the worker reports an explicit extraction error instead of returning sample
+content. Cloudinary is optional; set `STORAGE_PROVIDER=cloudinary` and all three
+Cloudinary credentials to enable signed direct uploads.
 
 The authenticated upload API is:
 
