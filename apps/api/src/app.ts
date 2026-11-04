@@ -13,6 +13,9 @@ import { createUnitsRouter } from './routes/units.routes.js';
 import type { UploadTicketQuota } from './services/upload-tickets.js';
 import type { ExplainService } from './services/explain.service.js';
 import { createExplainRouter } from './routes/explain.routes.js';
+import type { PlacesService } from './services/places.service.js';
+import { createPlacesRouter } from './routes/places.routes.js';
+import { createFlagsRouter } from './routes/flags.routes.js';
 
 export interface AppDependencies {
   authService: AuthService;
@@ -26,6 +29,7 @@ export interface AppDependencies {
     uploadsDirectory: string;
   };
   explain?: ExplainService;
+  palace?: PlacesService;
   webOrigin: string;
 }
 
@@ -45,6 +49,10 @@ export function createApp(dependencies: AppDependencies): Express {
   }
   if (dependencies.explain) {
     app.use('/topics', auth, createExplainRouter(dependencies.explain));
+  }
+  if (dependencies.palace) {
+    app.use('/places', auth, createPlacesRouter(dependencies.palace));
+    app.use('/flags', auth, createFlagsRouter(dependencies.palace));
   }
 
   app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));

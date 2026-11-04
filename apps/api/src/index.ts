@@ -18,6 +18,8 @@ import { createRedisConnection } from './services/redis-connection.js';
 import { PrismaExplanationsRepository } from './repositories/explanations.repository.js';
 import { ExplainService } from './services/explain.service.js';
 import { GeminiExplainAnalyzer } from './services/gemini-explain.js';
+import { PrismaPlacesRepository } from './repositories/places.repository.js';
+import { PlacesService } from './services/places.service.js';
 
 const redis = createClient({ url: config.REDIS_URL });
 redis.on('error', (error) => logger.error({ err: error }, 'Redis connection error'));
@@ -81,6 +83,14 @@ const explainService = new ExplainService({
   },
   nodeEnv: config.NODE_ENV,
 });
+const placesService = new PlacesService({
+  repository: new PrismaPlacesRepository(prisma),
+  storage,
+  publish: async (message) => {
+    if (!realtime) throw new Error('Socket server is not ready.');
+    await realtime.publish(message);
+  },
+});
 const app = createApp({
   authService,
   readiness: {
@@ -100,6 +110,7 @@ const app = createApp({
     uploadsDirectory,
   },
   explain: explainService,
+  palace: placesService,
   webOrigin: config.WEB_ORIGIN,
 });
 const server = createServer(app);

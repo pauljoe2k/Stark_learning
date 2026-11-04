@@ -6,6 +6,8 @@ import { SocketProvider, useSocket } from './socket';
 import { LoginPage } from './pages/LoginPage';
 import { TopicPage } from './pages/TopicPage';
 import { ExplainPage } from './pages/ExplainPage';
+import { PalacePage } from './pages/PalacePage';
+import { PlaceViewPage } from './pages/PlaceViewPage';
 
 const tabs = [
   { to: '/', label: 'Home', icon: Home },
@@ -58,7 +60,8 @@ function AppRoutes() {
               <Route path="/" element={<ShellPage title="Home" description="Your learning journey starts here." />} />
               <Route path="/topic" element={<TopicPage />} />
               <Route path="/explain" element={<ExplainPage />} />
-              <Route path="/palace" element={<ShellPage title="Palace" description="Pin key ideas to familiar places." />} />
+              <Route path="/palace" element={<PalacePage />} />
+              <Route path="/palace/:id" element={<PlaceViewPage />} />
               <Route path="/recall" element={<ShellPage title="Recall" description="Practice remembering what you pinned." />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

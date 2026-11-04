@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src test",
-    "test": "tsx --test test/auth.test.ts test/ownership.test.ts test/upload-validation.test.ts test/upload-tickets.test.ts test/topic-file-limits.test.ts test/socket-contract.test.ts test/explain-analysis.test.ts",
+    "test": "tsx --test test/auth.test.ts test/ownership.test.ts test/upload-validation.test.ts test/upload-tickets.test.ts test/topic-file-limits.test.ts test/socket-contract.test.ts test/explain-analysis.test.ts test/places-validation.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts",

@@ -1,4 +1,9 @@
-import type { ExplainBody, ExplainResult } from '@pinpoint/shared';
+import type {
+  CreateFlagBody,
+  ExplainBody,
+  ExplainResult,
+  UpdateFlagBody,
+} from '@pinpoint/shared';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -29,6 +34,33 @@ export interface TopicRecord {
 export interface UnitRecord {
   id: number;
   title: string;
+}
+
+export interface FlagRecord {
+  id: number;
+  placeId: number;
+  topicId: number | null;
+  keyPointId: number | null;
+  x: number;
+  y: number;
+  title: string;
+  note: string | null;
+  emoji: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlaceRecord {
+  id: number;
+  name: string;
+  imageUrl: string;
+  flagsCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlaceDetail extends Omit<PlaceRecord, 'flagsCount'> {
+  flags: FlagRecord[];
 }
 
 export interface ExtractionResult {
@@ -173,4 +205,26 @@ export const api = {
       { method: 'POST', body: JSON.stringify(input) },
       token,
     ),
+  places: (token: string) => request<{ places: PlaceRecord[] }>('/places', {}, token),
+  place: (token: string, id: number) => request<{ place: PlaceDetail }>(`/places/${id}`, {}, token),
+  createPlace: (token: string, name: string, image: File) => {
+    const body = new FormData();
+    body.append('name', name);
+    body.append('image', image);
+    return request<{ place: PlaceRecord }>('/places', { method: 'POST', body }, token);
+  },
+  renamePlace: (token: string, id: number, name: string) =>
+    request<{ place: Pick<PlaceRecord, 'id' | 'name' | 'imageUrl' | 'updatedAt'> }>(
+      `/places/${id}`,
+      { method: 'PATCH', body: JSON.stringify({ name }) },
+      token,
+    ),
+  deletePlace: (token: string, id: number) =>
+    request<void>(`/places/${id}`, { method: 'DELETE' }, token),
+  createFlag: (token: string, input: CreateFlagBody) =>
+    request<{ flag: FlagRecord }>('/flags', { method: 'POST', body: JSON.stringify(input) }, token),
+  updateFlag: (token: string, id: number, input: UpdateFlagBody) =>
+    request<{ flag: FlagRecord }>(`/flags/${id}`, { method: 'PATCH', body: JSON.stringify(input) }, token),
+  deleteFlag: (token: string, id: number) =>
+    request<void>(`/flags/${id}`, { method: 'DELETE' }, token),
 };

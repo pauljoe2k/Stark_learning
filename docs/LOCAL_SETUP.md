@@ -133,3 +133,34 @@ from Gemini or the keyword fallback. Authenticated sockets receive
 `explain:analyzing`, one `explain:result` per point, and `dashboard:updated`.
 Voice transcription depends on browser support and microphone permission; typed
 transcripts are always available.
+
+## Phase 3: Palace
+
+The Palace tab stores user-owned places with JPEG, PNG, or WebP photos. Photos
+are compressed in the browser and validated by image signature and size by the
+API. Open a place to zoom and pan the photo, add flags by tapping a location,
+edit or delete flags, and drag markers to save a new percentage position.
+Flags can remain free notes or link to one of the signed-in user's topics and
+key points. Place, flag, and image queries are refreshed after mutations.
+
+Authenticated endpoints:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/places` | List owned places with flag counts |
+| `POST` | `/places` | Multipart `name` and `image`; returns the created place |
+| `GET` | `/places/:id` | Read one owned place and its flags |
+| `PATCH` | `/places/:id` | Rename an owned place |
+| `DELETE` | `/places/:id` | Delete an owned place and its flags |
+| `POST` | `/flags` | Create a flag with `placeId`, percentage `x`/`y`, and `title` |
+| `PATCH` | `/flags/:id` | Edit a flag, including its position or topic/key-point link |
+| `DELETE` | `/flags/:id` | Delete an owned flag |
+
+Example:
+
+```powershell
+curl.exe -X POST http://localhost:4100/flags `
+  -H "Authorization: Bearer <access-token>" `
+  -H "Content-Type: application/json" `
+  -d '{"placeId":1,"x":35.5,"y":62,"title":"Chlorophyll","note":"Captures light energy."}'
+```

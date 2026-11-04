@@ -89,6 +89,12 @@ export const createPlaceBodySchema = z.object({
   name: z.string().trim().min(1).max(80),
   imageUrl: z.string().url().max(2048),
 }).strict();
+export const createPlaceUploadBodySchema = z.object({
+  name: z.string().trim().min(1).max(80),
+}).strict();
+export const updatePlaceBodySchema = z.object({
+  name: z.string().trim().min(1).max(80),
+}).strict();
 
 export const createFlagBodySchema = z.object({
   placeId: positiveIdSchema,
@@ -103,6 +109,8 @@ export const createFlagBodySchema = z.object({
 
 export const updateFlagBodySchema = createFlagBodySchema.partial().extend({
   placeId: z.never().optional(),
+  topicId: positiveIdSchema.nullable().optional(),
+  keyPointId: positiveIdSchema.nullable().optional(),
 }).strict();
 
 export const startRecallBodySchema = z.object({

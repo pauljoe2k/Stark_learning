@@ -3,10 +3,17 @@ import { Camera, ImagePlus, RotateCcw, X } from 'lucide-react';
 
 interface CameraCaptureProps {
   disabled?: boolean;
+  accept?: string;
+  hint?: string;
   onSelect: (file: File) => void;
 }
 
-export function CameraCapture({ disabled = false, onSelect }: CameraCaptureProps) {
+export function CameraCapture({
+  disabled = false,
+  accept = 'application/pdf,image/*',
+  hint = 'PDF, JPEG, PNG or WebP · up to 20 MB · two pages per topic',
+  onSelect,
+}: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -120,7 +127,7 @@ export function CameraCapture({ disabled = false, onSelect }: CameraCaptureProps
             ref={fileInputRef}
             className="visually-hidden"
             type="file"
-            accept="application/pdf,image/*"
+            accept={accept}
             capture="environment"
             disabled={disabled}
             onChange={(event) => chooseFile(event.currentTarget.files?.[0])}
@@ -131,7 +138,7 @@ export function CameraCapture({ disabled = false, onSelect }: CameraCaptureProps
         </button>
       </div>
       {cameraError && <p className="form-error" role="alert">{cameraError}</p>}
-      <p className="camera-hint">PDF, JPEG, PNG or WebP · up to 20 MB · two pages per topic</p>
+      <p className="camera-hint">{hint}</p>
     </div>
   );
 }
