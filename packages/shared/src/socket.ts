@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { extractionResultSchema } from './rest.js';
 
 const id = z.number().int().positive();
 const percent = z.number().int().min(0).max(100);
@@ -19,8 +20,7 @@ export const socketEventSchemas = {
   'file:done': z.object({
     fileId: id,
     topicId: id,
-    title: z.string().min(1).max(160),
-    notes: z.string().max(20_000),
+    extraction: extractionResultSchema,
     keyPoints: z.array(z.object({ id, text: z.string().min(1).max(1000) }).strict()).min(5).max(8),
   }).strict(),
   'file:error': z.object({ fileId: id, message: z.string().min(1).max(500) }).strict(),
@@ -96,3 +96,12 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   'recall:resume': (payload: SocketEventPayload<'recall:resume'>) => void;
 }
+
+export const workerSocketMessageSchema = z.discriminatedUnion('event', [
+  z.object({ userId: id, event: z.literal('file:processing'), payload: socketEventSchemas['file:processing'] }).strict(),
+  z.object({ userId: id, event: z.literal('file:progress'), payload: socketEventSchemas['file:progress'] }).strict(),
+  z.object({ userId: id, event: z.literal('file:done'), payload: socketEventSchemas['file:done'] }).strict(),
+  z.object({ userId: id, event: z.literal('file:error'), payload: socketEventSchemas['file:error'] }).strict(),
+]);
+
+export type WorkerSocketMessage = z.infer<typeof workerSocketMessageSchema>;

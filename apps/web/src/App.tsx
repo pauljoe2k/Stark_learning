@@ -4,6 +4,7 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, useAuth } from './auth';
 import { SocketProvider, useSocket } from './socket';
 import { LoginPage } from './pages/LoginPage';
+import { TopicPage } from './pages/TopicPage';
 
 const tabs = [
   { to: '/', label: 'Home', icon: Home },
@@ -54,7 +55,7 @@ function AppRoutes() {
           >
             <Routes location={location}>
               <Route path="/" element={<ShellPage title="Home" description="Your learning journey starts here." />} />
-              <Route path="/topic" element={<ShellPage title="Topic" description="Add a topic to begin learning." />} />
+              <Route path="/topic" element={<TopicPage />} />
               <Route path="/explain" element={<ShellPage title="Explain" description="Teach a topic back and find the gaps." />} />
               <Route path="/palace" element={<ShellPage title="Palace" description="Pin key ideas to familiar places." />} />
               <Route path="/recall" element={<ShellPage title="Recall" description="Practice remembering what you pinned." />} />

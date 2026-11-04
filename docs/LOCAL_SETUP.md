@@ -63,3 +63,38 @@ run it against the Compose database, set
 for the test process.
 
 Camera capture requires HTTPS or `localhost`. The local app uses the latter.
+
+## Phase 1: Topic uploads
+
+The Topic tab supports creating a topic, selecting a unit, uploading PDFs or
+images, capturing a page with the rear camera, and reviewing/editing the title,
+notes, and extracted key points before saving. The API checks file signatures,
+declared MIME type, size (20 MB), PDF page count, and the two-page/two-image
+limits before queuing extraction. Local storage is the default and is persisted
+in the `pinpoint-uploads` Compose volume (or `apps/api/uploads` without Docker).
+
+Set `GEMINI_API_KEY` in `apps/api/.env` or the environment for real extraction.
+Without a key, upload and job creation still work, but the worker reports an
+explicit extraction error instead of returning sample content. Cloudinary is
+optional; set `STORAGE_PROVIDER=cloudinary` and all three Cloudinary credentials
+to enable signed direct uploads.
+
+The authenticated upload API is:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/units` | List the signed-in user's units |
+| `POST` | `/units` | Create a unit |
+| `GET` | `/topics` | List topics and their files/key points |
+| `POST` | `/topics` | Create a topic |
+| `GET` | `/topics/:id` | Get one owned topic |
+| `PATCH` | `/topics/:id` | Save edited title, notes, and key points |
+| `POST` | `/topics/:id/upload-ticket` | Issue a one-use, user/topic-scoped upload ticket |
+| `POST` | `/topics/:id/files/local` | Multipart `file` + `uploadToken`; returns `202` |
+| `POST` | `/topics/:id/files/cloudinary` | Verify a signed Cloudinary upload; returns `202` |
+| `GET` | `/topics/:id/files/:fileId` | Read queued extraction status/result |
+
+Worker progress and completion arrive through the authenticated socket events
+`file:processing`, `file:progress`, `file:done`, and `file:error`. The browser
+also checks the file status endpoint so a disconnected socket does not strand
+an extraction review.

@@ -7,12 +7,21 @@ import { logger } from './logger.js';
 import { createAuthRouter } from './routes/auth.routes.js';
 import type { AuthService } from './services/auth.service.js';
 import { createAuthController } from './controllers/auth.controller.js';
+import type { TopicsService } from './services/topics.service.js';
+import { createTopicsRouter } from './routes/topics.routes.js';
+import { createUnitsRouter } from './routes/units.routes.js';
+import type { UploadTicketQuota } from './services/upload-tickets.js';
 
 export interface AppDependencies {
   authService: AuthService;
   readiness: {
     database: () => Promise<void>;
     redis: () => Promise<void>;
+  };
+  topics?: {
+    service: TopicsService;
+    uploadTicketQuota: UploadTicketQuota;
+    uploadsDirectory: string;
   };
   webOrigin: string;
 }
@@ -22,6 +31,14 @@ export function createApp(dependencies: AppDependencies): Express {
   app.use(cors({ origin: dependencies.webOrigin }));
   app.use(express.json({ limit: '1mb' }));
   app.use(pinoHttp({ logger }));
+  if (dependencies.topics) {
+    app.use('/media', express.static(dependencies.topics.uploadsDirectory, {
+      dotfiles: 'deny',
+      index: false,
+      maxAge: '1h',
+      fallthrough: false,
+    }));
+  }
 
   app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
   app.get('/ready', async (_req, res, next) => {
@@ -42,6 +59,14 @@ export function createApp(dependencies: AppDependencies): Express {
   });
   app.get('/me', createAuthMiddleware(dependencies.authService), createAuthController(dependencies.authService).me);
   app.use('/auth', createAuthRouter(dependencies.authService));
+  const auth = createAuthMiddleware(dependencies.authService);
+  if (dependencies.topics) {
+    app.use('/units', auth, createUnitsRouter(dependencies.topics.service));
+    app.use('/topics', auth, createTopicsRouter(
+      dependencies.topics.service,
+      dependencies.topics.uploadTicketQuota,
+    ));
+  }
   app.use((_req, res) => res.status(404).json({ error: 'Route not found.', code: 'NOT_FOUND' }));
   app.use(errorHandler);
   return app;

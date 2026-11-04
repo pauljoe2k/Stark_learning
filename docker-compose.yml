@@ -41,13 +41,17 @@ services:
       DEMO_PASSWORD: ${DEMO_PASSWORD:-PinpointDemo123!}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
-      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-cloudinary}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      UPLOAD_DIR: /workspace/apps/api/uploads
+      API_PUBLIC_URL: http://localhost:4100
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     command: sh -c "npm run prisma:migrate --workspace @pinpoint/api && npm run seed --workspace @pinpoint/api && npm run start --workspace @pinpoint/api"
     ports:
       - "4100:4000"
+    volumes:
+      - pinpoint-uploads:/workspace/apps/api/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,7 +73,17 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-do-not-use-in-production}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-PinpointDemo123!}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      UPLOAD_DIR: /workspace/apps/api/uploads
+      API_PUBLIC_URL: http://localhost:4100
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     command: ["npm", "run", "worker:start", "--workspace", "@pinpoint/api"]
+    volumes:
+      - pinpoint-uploads:/workspace/apps/api/uploads
     depends_on:
       api:
         condition: service_healthy
@@ -90,3 +104,4 @@ services:
 volumes:
   pinpoint-postgres:
   pinpoint-redis:
+  pinpoint-uploads:
