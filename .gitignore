@@ -4,5 +4,9 @@ dist/
 .env.*
 !.env.example
 server/uploads/
+logs/
 client/.vite/
 coverage/
+apps/*/dist/
+packages/*/dist/
+apps/web/.vite/

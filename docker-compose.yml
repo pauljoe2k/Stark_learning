@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pinpoint
+      POSTGRES_PASSWORD: pinpoint
+      POSTGRES_DB: pinpoint
+    ports:
+      - "5433:5432"
+    volumes:
+      - pinpoint-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pinpoint -d pinpoint"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - pinpoint-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      WEB_ORIGIN: http://localhost:5180
+      DATABASE_URL: postgresql://pinpoint:pinpoint@postgres:5432/pinpoint?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-do-not-use-in-production}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-PinpointDemo123!}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-cloudinary}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    command: sh -c "npm run prisma:migrate --workspace @pinpoint/api && npm run seed --workspace @pinpoint/api && npm run start --workspace @pinpoint/api"
+    ports:
+      - "4100:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 25
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://pinpoint:pinpoint@postgres:5432/pinpoint?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-do-not-use-in-production}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-PinpointDemo123!}
+    command: ["npm", "run", "worker:start", "--workspace", "@pinpoint/api"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4100
+    ports:
+      - "5180:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pinpoint-postgres:
+  pinpoint-redis:

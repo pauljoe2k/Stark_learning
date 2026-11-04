@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(80)
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @map("password_hash")
+  passMark     Int           @default(70) @map("pass_mark")
+  units        Unit[]
+  topics       Topic[]
+  places       Place[]
+  recallRounds RecallRound[]
+  exams        Exam[]
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Unit {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @db.VarChar(120)
+  topics    Topic[]
+  exams     Exam[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("units")
+}
+
+model Topic {
+  id                Int           @id @default(autoincrement())
+  userId            Int           @map("user_id")
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId            Int?          @map("unit_id")
+  unit              Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  title             String        @db.VarChar(160)
+  notes             String        @default("") @db.Text
+  keyPointsJson     Json          @default("[]") @map("key_points_json")
+  nextKeyPointId    Int           @default(1) @map("next_key_point_id")
+  mastery           Int           @default(0)
+  topicFiles        TopicFile[]
+  explanations      Explanation[]
+  flags             Flag[]
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([unitId])
+  @@map("topics")
+}
+
+model TopicFile {
+  id        Int      @id @default(autoincrement())
+  topicId   Int      @map("topic_id")
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  fileUrl   String   @map("file_url")
+  type      String   @db.VarChar(50)
+  pageCount Int      @map("page_count")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([topicId])
+  @@map("topic_files")
+}
+
+model Explanation {
+  id          Int      @id @default(autoincrement())
+  topicId     Int      @map("topic_id")
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  transcript  String   @db.Text
+  durationSec Int      @map("duration_sec")
+  score       Int
+  pointsJson  Json     @map("points_json")
+  summary     String   @db.Text
+  nextFocus   Json     @map("next_focus")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([topicId, createdAt])
+  @@map("explanations")
+}
+
+model Place {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String     @db.VarChar(80)
+  imageUrl  String     @map("image_url")
+  flags     Flag[]
+  rounds    RecallRound[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("places")
+}
+
+model Flag {
+  id         Int            @id @default(autoincrement())
+  placeId    Int            @map("place_id")
+  place      Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  topicId    Int?           @map("topic_id")
+  topic      Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  keyPointId Int?           @map("key_point_id")
+  x          Float
+  y          Float
+  title      String         @db.VarChar(120)
+  note       String?        @db.VarChar(2000)
+  emoji      String?        @db.VarChar(8)
+  results    RecallResult[]
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  @@index([placeId])
+  @@index([topicId])
+  @@map("flags")
+}
+
+model RecallRound {
+  id           Int            @id @default(autoincrement())
+  userId       Int            @map("user_id")
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  placeId      Int            @map("place_id")
+  place        Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  timeLimitSec Int            @map("time_limit_sec")
+  startedAt    DateTime       @default(now()) @map("started_at")
+  finishedAt   DateTime?      @map("finished_at")
+  results      RecallResult[]
+
+  @@index([userId, startedAt])
+  @@index([placeId])
+  @@map("recall_rounds")
+}
+
+model RecallResult {
+  id           Int         @id @default(autoincrement())
+  roundId      Int         @map("round_id")
+  round        RecallRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  flagId       Int         @map("flag_id")
+  flag         Flag        @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  result       String      @db.VarChar(10)
+  secondsTaken Int         @map("seconds_taken")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  @@unique([roundId, flagId])
+  @@index([flagId])
+  @@map("recall_results")
+}
+
+model Exam {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId    Int?     @map("unit_id")
+  unit      Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  title     String   @db.VarChar(160)
+  examDate  DateTime @map("exam_date")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, examDate])
+  @@index([unitId])
+  @@map("exams")
+}

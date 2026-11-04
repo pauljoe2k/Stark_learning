@@ -1,0 +1,17 @@
+{
+  "name": "Pinpoint",
+  "short_name": "Pinpoint",
+  "description": "Explain it. Pin it. Own it.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F6F1E7",
+  "theme_color": "#2F5D50",
+  "icons": [
+    {
+      "src": "/pinpoint.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

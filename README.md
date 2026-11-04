@@ -1,5 +1,11 @@
 # Pinpoint
 
+> **Architecture migration:** the approved TypeScript monorepo is being built in
+> [`apps/web`](./apps/web), [`apps/api`](./apps/api), and
+> [`packages/shared`](./packages/shared). The existing `client/` and `server/`
+> application remains intact while features migrate phase by phase. Start the
+> new foundation with the instructions in [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md).
+
 **Explain it. Pin it. Own it.**
 
 Pinpoint helps students learn faster by combining two proven techniques in one loop: speaking a topic out loud to expose gaps (active recall), and pinning each idea to a photo of a familiar place so it sticks (memory palace).
@@ -204,6 +210,16 @@ cd client && npm test && npm run build
 
 With a migrated database and the API running, run `bash server/scripts/test-palace.sh` from the repository root for Palace HTTP integration checks.
 
+### Exam calendar and motion
+
+The authenticated app shell includes an accessible monthly exam calendar on desktop and mobile. It uses the existing owner-scoped `GET /exams` endpoint (including each exam's optional unit as its subject); exam create, edit, and delete mutations refresh the calendar through React Query. Add an optional time and subject/unit on the dashboard to show them in calendar details. Page transitions, calendar marks, progress, and recall-streak feedback honor `prefers-reduced-motion`.
+
+### Windows desktop launcher
+
+Run `powershell -ExecutionPolicy Bypass -File scripts\install-shortcut.ps1` to place the Pinpoint shortcut and branded icon on your Desktop. Double-click it to start whichever local services are not already healthy and open the dashboard in an Edge/Chrome app window. Close that app window to stop services started by the launcher; pre-existing services are left running. Logs are written to `logs\`.
+
+To uninstall, delete `Pinpoint.lnk` from your Desktop. If port 4000 (API) or 5173 (Vite) is occupied by a non-Pinpoint process, stop that process or update the port values in `scripts\pinpoint-launcher.ps1`. A responding Pinpoint service is reused rather than duplicated.
+
 ## Environment variables
 
 ### Server (`server/.env`)
@@ -246,7 +262,7 @@ All routes except signup, login, and health require `Authorization: Bearer <toke
 | Places | `GET /places`, `POST /places`, `GET /places/:id`, `PATCH /places/:id`, `DELETE /places/:id` |
 | Flags | `POST /flags`, `PATCH /flags/:id`, `DELETE /flags/:id` |
 | Recall | `POST /recall/start`, `POST /recall/:roundId/reveal`, `POST /recall/:roundId/result`, `POST /recall/:roundId/finish`, `GET /recall/history` |
-| Exams | `GET /exams`, `POST /exams`, `PATCH /exams/:id`, `DELETE /exams/:id` |
+| Exams | `GET /exams` (authenticated, returns each exam with its optional unit/subject), `POST /exams`, `PATCH /exams/:id`, `DELETE /exams/:id` |
 | System | `GET /health` |
 
 ### Example: explain a topic
