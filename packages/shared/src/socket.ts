@@ -102,6 +102,9 @@ export const workerSocketMessageSchema = z.discriminatedUnion('event', [
   z.object({ userId: id, event: z.literal('file:progress'), payload: socketEventSchemas['file:progress'] }).strict(),
   z.object({ userId: id, event: z.literal('file:done'), payload: socketEventSchemas['file:done'] }).strict(),
   z.object({ userId: id, event: z.literal('file:error'), payload: socketEventSchemas['file:error'] }).strict(),
+  z.object({ userId: id, event: z.literal('explain:analyzing'), payload: socketEventSchemas['explain:analyzing'] }).strict(),
+  z.object({ userId: id, event: z.literal('explain:result'), payload: socketEventSchemas['explain:result'] }).strict(),
+  z.object({ userId: id, event: z.literal('dashboard:updated'), payload: socketEventSchemas['dashboard:updated'] }).strict(),
 ]);
 
 export type WorkerSocketMessage = z.infer<typeof workerSocketMessageSchema>;

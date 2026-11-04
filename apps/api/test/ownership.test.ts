@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { PrismaClient } from '@prisma/client';
 import { OwnershipRepository } from '../src/repositories/ownership.repository.js';
+import { PrismaExplanationsRepository } from '../src/repositories/explanations.repository.js';
 
 test('database resources are invisible to a different authenticated user', {
   skip: process.env.DATABASE_URL ? false : 'Set DATABASE_URL to run the database ownership integration test.',
@@ -44,6 +45,7 @@ test('database resources are invisible to a different authenticated user', {
     });
 
     const repository = new OwnershipRepository(prisma);
+    const explanationsRepository = new PrismaExplanationsRepository(prisma);
     const lookups = [
       repository.findUnitForUser(userB.id, unit.id),
       repository.findTopicForUser(userB.id, topic.id),
@@ -58,6 +60,16 @@ test('database resources are invisible to a different authenticated user', {
     const inaccessible = await Promise.all(lookups);
     assert.deepEqual(inaccessible, Array.from({ length: 9 }, () => null));
     assert.equal((await repository.findPlaceForUser(userA.id, place.id))?.flags.length, 1);
+    assert.equal(await explanationsRepository.findTopicForExplain(userB.id, topic.id), null);
+    assert.equal(await explanationsRepository.createForTopic(userB.id, {
+      topicId: topic.id,
+      transcript: 'This explanation belongs to another account.',
+      durationSec: 60,
+      score: 100,
+      points: [],
+      summary: 'private result',
+      nextFocus: [],
+    }), null);
   } finally {
     const userIds = [userAId, userBId].filter((id): id is number => id !== undefined);
     if (userIds.length > 0) await prisma.user.deleteMany({ where: { id: { in: userIds } } });

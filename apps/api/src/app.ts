@@ -11,6 +11,8 @@ import type { TopicsService } from './services/topics.service.js';
 import { createTopicsRouter } from './routes/topics.routes.js';
 import { createUnitsRouter } from './routes/units.routes.js';
 import type { UploadTicketQuota } from './services/upload-tickets.js';
+import type { ExplainService } from './services/explain.service.js';
+import { createExplainRouter } from './routes/explain.routes.js';
 
 export interface AppDependencies {
   authService: AuthService;
@@ -23,6 +25,7 @@ export interface AppDependencies {
     uploadTicketQuota: UploadTicketQuota;
     uploadsDirectory: string;
   };
+  explain?: ExplainService;
   webOrigin: string;
 }
 
@@ -31,6 +34,7 @@ export function createApp(dependencies: AppDependencies): Express {
   app.use(cors({ origin: dependencies.webOrigin }));
   app.use(express.json({ limit: '1mb' }));
   app.use(pinoHttp({ logger }));
+  const auth = createAuthMiddleware(dependencies.authService);
   if (dependencies.topics) {
     app.use('/media', express.static(dependencies.topics.uploadsDirectory, {
       dotfiles: 'deny',
@@ -38,6 +42,9 @@ export function createApp(dependencies: AppDependencies): Express {
       maxAge: '1h',
       fallthrough: false,
     }));
+  }
+  if (dependencies.explain) {
+    app.use('/topics', auth, createExplainRouter(dependencies.explain));
   }
 
   app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
@@ -59,7 +66,6 @@ export function createApp(dependencies: AppDependencies): Express {
   });
   app.get('/me', createAuthMiddleware(dependencies.authService), createAuthController(dependencies.authService).me);
   app.use('/auth', createAuthRouter(dependencies.authService));
-  const auth = createAuthMiddleware(dependencies.authService);
   if (dependencies.topics) {
     app.use('/units', auth, createUnitsRouter(dependencies.topics.service));
     app.use('/topics', auth, createTopicsRouter(

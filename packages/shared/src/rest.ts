@@ -42,8 +42,29 @@ export const topicFileIdParamsSchema = z.object({
   fileId: positiveIdSchema,
 }).strict();
 export const explainBodySchema = z.object({
-  transcript: z.string().trim().min(1).max(20_000),
+  transcript: z.string().trim().min(1).max(20_000)
+    .refine((value) => value.split(/\s+/).filter(Boolean).length >= 15, 'Explain for at least 15 words before submitting.'),
   durationSec: z.union([z.literal(60), z.literal(120), z.literal(180), z.literal(300)]),
+}).strict();
+
+export const explainPointResultSchema = z.object({
+  keyPointId: positiveIdSchema,
+  status: z.enum(['covered', 'partial', 'incorrect', 'missing']),
+  evidence: z.string().max(500),
+  feedback: z.string().max(1000),
+}).strict();
+
+export const explainResultSchema = z.object({
+  id: positiveIdSchema,
+  topicId: positiveIdSchema,
+  transcript: z.string().max(20_000),
+  durationSec: z.union([z.literal(60), z.literal(120), z.literal(180), z.literal(300)]),
+  score: z.number().int().min(0).max(100),
+  points: z.array(explainPointResultSchema).min(1).max(30),
+  summary: z.string().max(1000),
+  nextFocus: z.array(positiveIdSchema).max(2),
+  source: z.enum(['ai', 'keyword']),
+  createdAt: z.string().datetime(),
 }).strict();
 
 export const extractionResultSchema = z.object({
@@ -107,6 +128,7 @@ export type CreateTopicBody = z.infer<typeof createTopicBodySchema>;
 export type UpdateTopicBody = z.infer<typeof updateTopicBodySchema>;
 export type ExtractionResult = z.infer<typeof extractionResultSchema>;
 export type ExplainBody = z.infer<typeof explainBodySchema>;
+export type ExplainResult = z.infer<typeof explainResultSchema>;
 export type CreatePlaceBody = z.infer<typeof createPlaceBodySchema>;
 export type CreateFlagBody = z.infer<typeof createFlagBodySchema>;
 export type UpdateFlagBody = z.infer<typeof updateFlagBodySchema>;

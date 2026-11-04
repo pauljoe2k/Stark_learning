@@ -100,3 +100,36 @@ Worker progress and completion arrive through the authenticated socket events
 `file:processing`, `file:progress`, `file:done`, and `file:error`. The browser
 also checks the file status endpoint so a disconnected socket does not strand
 an extraction review.
+
+## Phase 2: Explain
+
+The Explain tab lets a student choose a saved topic and a 1, 2, 3, or 5 minute
+session, speak using browser speech recognition, or type a transcript. The
+transcript remains editable before submission. Submissions under 15 words are
+rejected by both the browser and API. The API compares the transcript with the
+topic notes and key points, computes the score in code (covered = 1, partial =
+0.5, incorrect/missing = 0), updates topic mastery, and saves the explanation.
+AI responses are schema-validated and retried once when malformed. If Gemini
+is unavailable, a labeled keyword-based estimate is returned instead.
+
+Authenticated endpoint:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/topics/:id/explain` | Analyze and save `{ "transcript": "...", "durationSec": 120 }`; duration must be 60, 120, 180, or 300 seconds |
+
+Example:
+
+```powershell
+curl.exe -X POST http://localhost:4100/topics/1/explain `
+  -H "Authorization: Bearer <access-token>" `
+  -H "Content-Type: application/json" `
+  -d '{"transcript":"Cells use mitochondria to release energy from food so the cell can power its everyday activities during growth.","durationSec":60}'
+```
+
+The response contains the saved explanation ID, score, summary, each key point's
+status/evidence/feedback, the next gaps to focus on, and whether the result came
+from Gemini or the keyword fallback. Authenticated sockets receive
+`explain:analyzing`, one `explain:result` per point, and `dashboard:updated`.
+Voice transcription depends on browser support and microphone permission; typed
+transcripts are always available.

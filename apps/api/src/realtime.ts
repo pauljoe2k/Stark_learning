@@ -67,6 +67,15 @@ export async function createRealtime(
       case 'file:error':
         emitUserEvent(io, message.userId, message.event, message.payload);
         break;
+      case 'explain:analyzing':
+        emitUserEvent(io, message.userId, message.event, message.payload);
+        break;
+      case 'explain:result':
+        emitUserEvent(io, message.userId, message.event, message.payload);
+        break;
+      case 'dashboard:updated':
+        emitUserEvent(io, message.userId, message.event, message.payload);
+        break;
     }
   });
 

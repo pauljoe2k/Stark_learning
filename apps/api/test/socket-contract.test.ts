@@ -50,3 +50,27 @@ test('socket payloads reject extra fields and invalid key-point counts', () => {
     false,
   );
 });
+
+test('Explain socket events validate each streamed gap-map point', () => {
+  const message = {
+    userId: 7,
+    event: 'explain:result',
+    payload: {
+      topicId: 4,
+      index: 0,
+      total: 5,
+      point: {
+        keyPointId: 12,
+        status: 'partial',
+        evidence: 'A short quote.',
+        feedback: 'Add one more detail.',
+      },
+    },
+  };
+  assert.equal(workerSocketMessageSchema.safeParse(message).success, true);
+  assert.equal(socketEventSchemas['explain:result'].safeParse(message.payload).success, true);
+  assert.equal(socketEventSchemas['explain:result'].safeParse({
+    ...message.payload,
+    point: { ...message.payload.point, unexpected: true },
+  }).success, false);
+});

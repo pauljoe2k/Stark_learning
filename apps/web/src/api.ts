@@ -1,3 +1,5 @@
+import type { ExplainBody, ExplainResult } from '@pinpoint/shared';
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 export interface KeyPoint {
@@ -165,4 +167,10 @@ export const api = {
       result?: ExtractionJobResult;
       error?: string;
     }>(`/topics/${topicId}/files/${fileId}`, {}, token),
+  explain: (token: string, topicId: number, input: ExplainBody) =>
+    request<{ explanation: ExplainResult }>(
+      `/topics/${topicId}/explain`,
+      { method: 'POST', body: JSON.stringify(input) },
+      token,
+    ),
 };

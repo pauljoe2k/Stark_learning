@@ -15,6 +15,9 @@ import { PrismaTopicsRepository } from './repositories/topics.repository.js';
 import { UploadStorage } from './services/upload-storage.js';
 import { UploadTickets } from './services/upload-tickets.js';
 import { createRedisConnection } from './services/redis-connection.js';
+import { PrismaExplanationsRepository } from './repositories/explanations.repository.js';
+import { ExplainService } from './services/explain.service.js';
+import { GeminiExplainAnalyzer } from './services/gemini-explain.js';
 
 const redis = createClient({ url: config.REDIS_URL });
 redis.on('error', (error) => logger.error({ err: error }, 'Redis connection error'));
@@ -55,6 +58,29 @@ const topicsService = new TopicsService({
     await realtime.publish(message);
   },
 });
+const explainService = new ExplainService({
+  repository: new PrismaExplanationsRepository(prisma),
+  analyzer: new GeminiExplainAnalyzer(config.GEMINI_API_KEY, config.GEMINI_MODEL),
+  quota: {
+    consume: async (userId) => {
+      const key = `rate:explain:${userId}`;
+      const count = await redis.incr(key);
+      if (count === 1) await redis.expire(key, 60);
+      return count <= 10;
+    },
+  },
+  cache: {
+    get: (key) => redis.get(key),
+    set: async (key, value, ttlSeconds) => {
+      await redis.set(key, value, { EX: ttlSeconds });
+    },
+  },
+  publish: async (message) => {
+    if (!realtime) throw new Error('Socket server is not ready.');
+    await realtime.publish(message);
+  },
+  nodeEnv: config.NODE_ENV,
+});
 const app = createApp({
   authService,
   readiness: {
@@ -73,6 +99,7 @@ const app = createApp({
     },
     uploadsDirectory,
   },
+  explain: explainService,
   webOrigin: config.WEB_ORIGIN,
 });
 const server = createServer(app);
