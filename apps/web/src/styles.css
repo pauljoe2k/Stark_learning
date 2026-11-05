@@ -479,7 +479,7 @@ h1, h2 { font-family: Fraunces, Georgia, serif; }
 .home-section-heading .text-button { display: inline-flex; align-items: center; gap: 5px; margin: 0; }
 .home-empty { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px; color: var(--muted); font-size: 13px; }
 .home-empty p { margin: 7px 0; }
-.home-topic-row { display: grid; grid-template-columns: 39px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 12px 0; border-top: 1px solid var(--line); }
+.home-topic-row { display: grid; grid-template-columns: 39px minmax(0, 1fr) auto auto; align-items: center; gap: 11px; padding: 12px 0; border-top: 1px solid var(--line); }
 .home-topic-row h3 { margin: 0 0 3px; font-size: 14px; }
 .home-topic-row p { margin: 0; color: var(--muted); font-size: 11px; }
 .home-topic-row .home-topic-mark { width: 34px; height: 34px; }
@@ -495,4 +495,10 @@ h1, h2 { font-family: Fraunces, Georgia, serif; }
   .home-stat-card > a { font-size: 10px; }
   .home-topic-row { grid-template-columns: 34px minmax(0, 1fr); }
   .home-topic-row > a { grid-column: 2; }
+  .home-topic-row > .mastery-ring { grid-column: 2; justify-self: end; }
 }
+.mastery-ring { color: var(--ink); }
+.mastery-ring-track { stroke: color-mix(in srgb, var(--muted) 18%, var(--surface)); }
+.mastery-ring-progress { transition: stroke-dashoffset 600ms ease; }
+.mastery-ring text { font-weight: 700; }
+@media (prefers-reduced-motion: reduce){ .mastery-ring-progress{transition:none} }

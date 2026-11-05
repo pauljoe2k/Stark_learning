@@ -2,6 +2,9 @@ import type {
   CreateFlagBody,
   ExplainBody,
   ExplainResult,
+  RecallResultBody,
+  RecallVoiceAnswerBody,
+  StartRecallBody,
   UpdateFlagBody,
 } from '@pinpoint/shared';
 
@@ -25,6 +28,7 @@ export interface TopicRecord {
   unitId: number | null;
   title: string;
   notes: string;
+  mastery: number;
   keyPoints: KeyPoint[];
   topicFiles: TopicFile[];
   unit: { id: number; title: string } | null;
@@ -46,6 +50,10 @@ export interface FlagRecord {
   title: string;
   note: string | null;
   emoji: string | null;
+  reviewIntervalDays: number;
+  reviewEase: number;
+  nextReviewAt: string | null;
+  lastReviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +69,41 @@ export interface PlaceRecord {
 
 export interface PlaceDetail extends Omit<PlaceRecord, 'flagsCount'> {
   flags: FlagRecord[];
+}
+
+export interface SharedPlace {
+  id: number;
+  name: string;
+  imageUrl: string;
+  flags: Array<Pick<FlagRecord, 'id' | 'x' | 'y' | 'title' | 'note' | 'emoji'>>;
+}
+
+export interface OfflineReviewPlace {
+  id: number;
+  name: string;
+  flags: Array<{ id: number; title: string; note: string | null; emoji: string | null }>;
+}
+
+export interface RecallRound {
+  roundId: number;
+  timeLimitSec: number;
+  speedMode: boolean;
+  place: { id: number; name: string; imageUrl: string };
+  flags: Array<{ id: number; x: number; y: number }>;
+}
+
+export interface RecallCompletion {
+  roundId: number;
+  place: { id: number; name: string; imageUrl: string };
+  flags: SharedPlace['flags'];
+  results: Array<{
+    flagId: number;
+    result: 'green' | 'red';
+    secondsTaken: number;
+    aiFeedback: string | null;
+    gradingSource: string | null;
+  }>;
+  summary: { green: number; red: number };
 }
 
 export interface ExtractionResult {
@@ -103,6 +146,13 @@ interface AuthResponse {
   token: string;
 }
 
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
@@ -114,7 +164,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
     const message = typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string'
       ? body.error
       : 'The request could not be completed.';
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
   return body as T;
 }
@@ -124,7 +174,8 @@ export const api = {
     request<AuthResponse>('/auth/signup', { method: 'POST', body: JSON.stringify(input) }),
   login: (input: { email: string; password: string }) =>
     request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(input) }),
-  me: (token: string) => request<{ user: AuthUser }>('/me', {}, token),
+  me: (token: string, signal?: AbortSignal) =>
+    request<{ user: AuthUser }>('/me', signal ? { signal } : {}, token),
   topics: (token: string) => request<{ topics: TopicRecord[] }>('/topics', {}, token),
   units: (token: string) => request<{ units: UnitRecord[] }>('/units', {}, token),
   createTopic: (token: string, input: { title: string; unitId?: number }) =>
@@ -227,4 +278,40 @@ export const api = {
     request<{ flag: FlagRecord }>(`/flags/${id}`, { method: 'PATCH', body: JSON.stringify(input) }, token),
   deleteFlag: (token: string, id: number) =>
     request<void>(`/flags/${id}`, { method: 'DELETE' }, token),
+  dueFlags: (token: string) =>
+    request<{ flags: Array<FlagRecord & { place: { id: number; name: string; imageUrl: string } }> }>('/flags/due', {}, token),
+  reviewFlag: (token: string, id: number, grade: 'correct' | 'incorrect') =>
+    request<{ flag: FlagRecord }>(`/flags/${id}/review`, { method: 'POST', body: JSON.stringify({ grade }) }, token),
+  placeShareStatus: (token: string, id: number) =>
+    request<{ share: { active: boolean; createdAt?: string } }>(`/places/${id}/share`, {}, token),
+  createPlaceShare: (token: string, id: number) =>
+    request<{ token: string }>(`/places/${id}/share`, { method: 'POST', body: '{}' }, token),
+  revokePlaceShare: (token: string, id: number) =>
+    request<void>(`/places/${id}/share`, { method: 'DELETE' }, token),
+  sharedPlace: (shareToken: string) =>
+    request<{ place: SharedPlace }>(`/shared/${encodeURIComponent(shareToken)}`),
+  startRecall: (token: string, settings: StartRecallBody) =>
+    request<RecallRound>('/recall/start', { method: 'POST', body: JSON.stringify(settings) }, token),
+  revealRecallFlag: (token: string, roundId: number, flagId: number) =>
+    request<{ flag: { id: number; title: string; note: string | null; emoji: string | null; timeLimitSec: number } }>(
+      `/recall/${roundId}/reveal`,
+      { method: 'POST', body: JSON.stringify({ flagId }) },
+      token,
+    ),
+  saveRecallResult: (token: string, roundId: number, result: RecallResultBody) =>
+    request<{ result: { flagId: number; result: 'green' | 'red'; secondsTaken: number } }>(
+      `/recall/${roundId}/result`,
+      { method: 'POST', body: JSON.stringify(result) },
+      token,
+    ),
+  submitRecallVoiceAnswer: (token: string, roundId: number, input: RecallVoiceAnswerBody) =>
+    request<{ result: { flagId: number; result: 'green' | 'red'; secondsTaken: number; feedback: string; source: 'ai' } }>(
+      `/recall/${roundId}/voice-answer`,
+      { method: 'POST', body: JSON.stringify(input) },
+      token,
+    ),
+  finishRecall: (token: string, roundId: number) =>
+    request<RecallCompletion>(`/recall/${roundId}/finish`, { method: 'POST', body: '{}' }, token),
+  offlineReview: (token: string) =>
+    request<{ places: OfflineReviewPlace[] }>('/recall/offline', {}, token),
 };
