@@ -144,6 +144,10 @@ h1, h2 { font-family: Fraunces, Georgia, serif; }
   .recall-marker:active { transform: translate(-50%, -50%) scale(.975); touch-action: manipulation; }
   .recall-marker.green { background: #32724f; }
   .recall-marker.red { background: #a63e2f; }
+  .recall-heatmap .recall-marker { pointer-events: none; }
+  .recall-legend { display: flex; gap: .75rem; align-items: center; font-size: .85rem; color: var(--muted, #6B645A); }
+  .recall-legend .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .recall-legend .dot.green { background: #32724f; } .recall-legend .dot.red { background: #a63e2f; }
   .recall-marker:disabled { cursor: default; opacity: .92; }
   .recall-answer-panel { position: relative; display: grid; align-content: start; gap: 12px; }
   .recall-answer-panel > p, .recall-answer-panel > h3 { margin: 0; }
