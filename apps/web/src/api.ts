@@ -1,5 +1,6 @@
 import type {
   CreateFlagBody,
+  DashboardResponse,
   ExplainBody,
   ExplainResult,
   RecallResultBody,
@@ -170,6 +171,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
 }
 
 export const api = {
+  dashboard: (token: string) => request<DashboardResponse>('/dashboard', {}, token),
   signup: (input: { name: string; email: string; password: string }) =>
     request<AuthResponse>('/auth/signup', { method: 'POST', body: JSON.stringify(input) }),
   login: (input: { email: string; password: string }) =>

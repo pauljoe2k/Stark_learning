@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, ArrowLeft, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Link2, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { CreateFlagBody } from '@pinpoint/shared';
 import { api } from '../api';
@@ -24,6 +24,7 @@ export function PlaceViewPage() {
   const placeId = Number(routeId);
   const validPlaceId = Number.isInteger(placeId) && placeId > 0;
   const { token } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const placeQuery = usePlace(validPlaceId ? placeId : undefined);
   const [addMode, setAddMode] = useState(false);
@@ -32,6 +33,10 @@ export function PlaceViewPage() {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
+  const [walkthroughIndex, setWalkthroughIndex] = useState<number | null>(null);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareError, setShareError] = useState('');
+  const [sharing, setSharing] = useState(false);
 
   const topicsQuery = useQuery({
     queryKey: ['topics', token],
@@ -40,6 +45,14 @@ export function PlaceViewPage() {
       return (await api.topics(token)).topics;
     },
     enabled: Boolean(token),
+  });
+  const shareQuery = useQuery({
+    queryKey: ['place-share', token, placeId],
+    queryFn: async () => {
+      if (!token) throw new Error('Sign in to manage this share link.');
+      return (await api.placeShareStatus(token, placeId)).share;
+    },
+    enabled: Boolean(token && validPlaceId),
   });
   const renameMutation = useRenamePlace(placeId);
   const deletePlaceMutation = useDeletePlace(placeId);
@@ -114,6 +127,45 @@ export function PlaceViewPage() {
   const saving = createFlagMutation.isPending || updateFlagMutation.isPending;
   const flagForPanel = selectedFlagId === null ? null : selectedFlag;
   const panelOpen = draftPosition !== null || selectedFlagId !== null;
+  const canvasSelectedFlagId = walkthroughIndex === null
+    ? selectedFlagId
+    : place.flags[walkthroughIndex]?.id ?? null;
+
+  async function createShareLink(): Promise<void> {
+    if (!token) return;
+    setShareError('');
+    setSharing(true);
+    try {
+      const { token: shareToken } = await api.createPlaceShare(token, placeId);
+      const url = `${window.location.origin}/shared/${shareToken}`;
+      setShareUrl(url);
+      await queryClient.invalidateQueries({ queryKey: ['place-share', token, placeId] });
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        setShareError('The link is ready below, but could not be copied automatically.');
+      }
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : 'The share link could not be created.');
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function revokeShareLink(): Promise<void> {
+    if (!token) return;
+    setShareError('');
+    setSharing(true);
+    try {
+      await api.revokePlaceShare(token, placeId);
+      setShareUrl('');
+      await queryClient.invalidateQueries({ queryKey: ['place-share', token, placeId] });
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : 'The share link could not be revoked.');
+    } finally {
+      setSharing(false);
+    }
+  }
 
   return (
     <section className="place-view-page">
@@ -144,6 +196,26 @@ export function PlaceViewPage() {
         <div className="place-view-actions">
           <button
             type="button"
+            className="secondary-button"
+            disabled={place.flags.length === 0}
+            onClick={() => {
+              closePanel();
+              setAddMode(false);
+              setWalkthroughIndex(0);
+            }}
+          >
+            <Play size={16} aria-hidden="true" /> Walk through
+          </button>
+          <button type="button" className="secondary-button" disabled={sharing || shareQuery.isPending} onClick={() => void createShareLink()}>
+            <Link2 size={16} aria-hidden="true" /> {sharing ? 'Creating link…' : shareQuery.data?.active ? 'Rotate share link' : 'Create share link'}
+          </button>
+          {shareQuery.data?.active && (
+            <button type="button" className="danger-outline-button" disabled={sharing} onClick={() => void revokeShareLink()}>
+              {sharing ? 'Revoking…' : 'Revoke share link'}
+            </button>
+          )}
+          <button
+            type="button"
             className={`primary-button${addMode ? ' add-mode-active' : ''}`}
             onClick={() => {
               closePanel();
@@ -166,6 +238,9 @@ export function PlaceViewPage() {
 
       {deletePlaceMutation.isError && <p className="form-error" role="alert">{deletePlaceMutation.error.message}</p>}
       {updateFlagMutation.isError && !panelOpen && <p className="form-error" role="alert">{updateFlagMutation.error.message}</p>}
+      {shareQuery.isError && <p className="form-error" role="alert">{shareQuery.error.message}</p>}
+      {shareError && <p className="form-error" role="alert">{shareError}</p>}
+      {shareUrl && <label className="share-link-field">Read-only share link<input readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} /><span><Copy size={14} /> Copied when available; you can also copy this URL manually.</span></label>}
       <div className={`place-view-layout${panelOpen ? ' panel-open' : ''}`}>
         <div className="place-canvas-column">
           {place.flags.length === 0 && !addMode && (
@@ -175,15 +250,17 @@ export function PlaceViewPage() {
             imageUrl={place.imageUrl}
             imageAlt={`Photo of ${place.name}`}
             flags={place.flags}
-            selectedFlagId={selectedFlagId}
+            selectedFlagId={canvasSelectedFlagId}
             addMode={addMode}
             onDraftPosition={(position) => {
               setDraftPosition(position);
               setSelectedFlagId(null);
+              setWalkthroughIndex(null);
               setAddMode(false);
             }}
             onSelectFlag={(flagId) => {
               setSelectedFlagId(flagId);
+              setWalkthroughIndex(null);
               setDraftPosition(null);
               setAddMode(false);
             }}
@@ -206,6 +283,28 @@ export function PlaceViewPage() {
           />
         )}
       </div>
+      {walkthroughIndex !== null && place.flags[walkthroughIndex] && (
+        <section className="walkthrough-card" aria-live="polite">
+          <div className="walkthrough-progress">
+            <span className="eyebrow">PLACE WALK-THROUGH</span>
+            <button type="button" className="text-button" onClick={() => setWalkthroughIndex(null)}>Exit</button>
+          </div>
+          <p className="recall-muted">Flag {walkthroughIndex + 1} of {place.flags.length}</p>
+          <h2>{place.flags[walkthroughIndex].emoji ? `${place.flags[walkthroughIndex].emoji} ` : ''}{place.flags[walkthroughIndex].title}</h2>
+          <p>{place.flags[walkthroughIndex].note || 'No note saved for this flag.'}</p>
+          <div className="walkthrough-actions">
+            <button type="button" className="secondary-button" disabled={walkthroughIndex === 0} onClick={() => setWalkthroughIndex((current) => Math.max(0, (current ?? 0) - 1))}>
+              <ChevronLeft size={16} /> Previous
+            </button>
+            <button type="button" className="primary-button" onClick={() => {
+              if (walkthroughIndex + 1 >= place.flags.length) setWalkthroughIndex(null);
+              else setWalkthroughIndex(walkthroughIndex + 1);
+            }}>
+              {walkthroughIndex + 1 === place.flags.length ? 'Finish walkthrough' : <>Next flag <ChevronRight size={16} /></>}
+            </button>
+          </div>
+        </section>
+      )}
       {topicsQuery.isError && <p className="form-error" role="alert">Topic links could not be loaded: {topicsQuery.error.message}</p>}
     </section>
   );

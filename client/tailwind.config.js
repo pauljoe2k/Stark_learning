@@ -4,10 +4,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#192a2a',
-        paper: '#f6f7f5',
-        moss: '#416d61',
+        ink: 'var(--ink)',
+        paper: 'var(--paper)',
+        moss: 'var(--pine)',
+        pine: 'var(--pine)',
+        accent: 'var(--accent)',
+        mustard: 'var(--mustard)',
+        surface: 'var(--surface)',
+        muted: 'var(--muted)',
+        line: 'var(--line)',
       },
+      fontFamily: { heading: ['Fraunces', 'Georgia', 'serif'] },
     },
   },
   plugins: [],

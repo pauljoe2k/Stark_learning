@@ -20,6 +20,11 @@ import { ExplainService } from './services/explain.service.js';
 import { GeminiExplainAnalyzer } from './services/gemini-explain.js';
 import { PrismaPlacesRepository } from './repositories/places.repository.js';
 import { PlacesService } from './services/places.service.js';
+import { PrismaRecallRepository } from './repositories/recall.repository.js';
+import { RecallService } from './services/recall.service.js';
+import { GeminiRecallChecker } from './services/recall-analysis.js';
+import { PrismaDashboardRepository } from './repositories/dashboard.repository.js';
+import { DashboardService } from './services/dashboard.service.js';
 
 const redis = createClient({ url: config.REDIS_URL });
 redis.on('error', (error) => logger.error({ err: error }, 'Redis connection error'));
@@ -91,6 +96,10 @@ const placesService = new PlacesService({
     await realtime.publish(message);
   },
 });
+const recallService = new RecallService({
+  repository: new PrismaRecallRepository(prisma),
+  checker: new GeminiRecallChecker(config.GEMINI_API_KEY, config.GEMINI_MODEL),
+});
 const app = createApp({
   authService,
   readiness: {
@@ -111,6 +120,8 @@ const app = createApp({
   },
   explain: explainService,
   palace: placesService,
+  recall: recallService,
+  dashboard: new DashboardService({ repository: new PrismaDashboardRepository(prisma) }),
   webOrigin: config.WEB_ORIGIN,
 });
 const server = createServer(app);

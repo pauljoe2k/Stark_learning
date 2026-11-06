@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, Check, Clock3, Eye, X } from 'lucide-react';
 import RecallBoard from '../components/recall/RecallBoard.jsx';
 import RecallSetup from '../components/recall/RecallSetup.jsx';
@@ -22,6 +22,7 @@ export default function Recall() {
   const [errorText, setErrorText] = useState('');
   const [saving, setSaving] = useState(false);
   const startedAt = useRef(0);
+  const answerPanelRef = useRef(null);
   const reveal = useRevealRecall(round?.roundId);
   const saveResult = useSaveRecallResult(round?.roundId);
   const finishRound = useFinishRecall(round?.roundId);
@@ -52,9 +53,15 @@ export default function Recall() {
   }, [saveFlagResult, round?.time_limit_sec]);
   const timeRemaining = useRecallTimer(
     round?.time_limit_sec ?? 30,
-    Boolean(selectedFlag && !answerVisible),
+    Boolean(selectedFlag && !answerVisible && !reveal.isPending),
     onTimeout,
   );
+
+  useEffect(() => {
+    if (!selectedFlag) return;
+    answerPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    answerPanelRef.current?.focus({ preventScroll: true });
+  }, [selectedFlag?.id]);
 
   async function start(timeLimit) {
     setErrorText('');
@@ -71,22 +78,25 @@ export default function Recall() {
     }
   }
 
-  async function selectFlag(flag) {
+  function selectFlag(flag) {
+    if (selectedFlag || outcomes[flag.id]) return;
     setErrorText('');
-    try {
-      const full = await reveal.mutateAsync(flag.id);
-      setSelectedFlag(flag);
-      setAnswer(full);
-      setAnswerVisible(false);
-      startedAt.current = Date.now();
-    } catch (requestError) {
-      setErrorText(requestError.message || 'This flag could not be opened.');
-    }
+    setSelectedFlag(flag);
+    setAnswer(null);
+    setAnswerVisible(false);
+    startedAt.current = Date.now();
   }
 
   async function showAnswer() {
-    const elapsed = Math.max(0, Math.floor((Date.now() - startedAt.current) / 1000));
-    setAnswerVisible(true);
+    if (!selectedFlag || reveal.isPending) return;
+    setErrorText('');
+    try {
+      const full = await reveal.mutateAsync(selectedFlag.id);
+      setAnswer(full);
+      setAnswerVisible(true);
+    } catch (requestError) {
+      setErrorText(requestError.message || 'The answer could not be loaded. Try again.');
+    }
   }
 
   async function grade(result) {
@@ -132,7 +142,7 @@ export default function Recall() {
         </div>
         <div className="grid gap-5 lg:grid-cols-[1fr_21rem]">
           <RecallBoard place={round.place} flags={round.flags} outcomes={outcomes} activeId={selectedFlag?.id} onPick={selectFlag} hidden />
-          <section aria-live="polite" className="rounded-2xl border border-slate-200 bg-white p-5">
+          <section ref={answerPanelRef} tabIndex={-1} aria-live="polite" aria-label="Recall answer panel" className="rounded-2xl border border-slate-200 bg-white p-5 outline-none focus-visible:ring-2 focus-visible:ring-moss">
             {!selectedFlag ? (
               <div className="flex min-h-44 flex-col items-center justify-center text-center">
                 <Eye aria-hidden="true" className="text-moss" size={32} />

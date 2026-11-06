@@ -66,6 +66,13 @@ test('score awards covered=1, partial=0.5, and incorrect or missing=0', () => {
     { keyPointId: 4, status: 'partial', evidence: '', feedback: '' },
     { keyPointId: 5, status: 'partial', evidence: '', feedback: '' },
   ]), 80);
+  assert.equal(calculateExplainScore([
+    { keyPointId: 1, status: 'covered', evidence: '', feedback: '' },
+    { keyPointId: 2, status: 'partial', evidence: '', feedback: '' },
+    { keyPointId: 3, status: 'partial', evidence: '', feedback: '' },
+  ]), 67);
+  assert.equal(calculateExplainScore([{ keyPointId: 1, status: 'covered', evidence: '', feedback: '' }]), 100);
+  assert.equal(calculateExplainScore([]), 0);
 });
 
 test('Explain requests reject transcripts shorter than fifteen words', () => {
@@ -112,7 +119,40 @@ test('Explain service persists a scored keyword fallback when Gemini is unavaila
   assert.deepEqual(result.nextFocus, [4, 5]);
   assert.deepEqual(saved(), { score: 70 });
   assert.equal(events[0], 'explain:analyzing');
+  assert.ok(events.includes('dashboard:updated'));
   assert.equal(events.filter((event) => event === 'explain:result').length, 5);
+});
+
+test('Explain falls back to keyword analysis when Gemini returns invalid analysis', async () => {
+  const { repository } = createRepository();
+  const service = new ExplainService({
+    repository,
+    analyzer: { analyze: async () => ({
+      points: [{ keyPointId: 999, status: 'covered', evidence: '', feedback: '' }],
+      summary: 'Invalid key-point ID.',
+      nextFocus: [],
+    }) },
+    quota: { consume: async () => true },
+    cache: { get: async () => null, set: async () => undefined },
+    nodeEnv: 'test',
+  });
+  const result = await service.submit(3, 12, { transcript, durationSec: 60 });
+  assert.equal(result.source, 'keyword');
+  assert.equal(result.points.length, 5);
+});
+
+test('Explain enforces the per-user analysis quota before publishing or saving', async () => {
+  const { repository } = createRepository();
+  let analyzed = false;
+  const service = new ExplainService({
+    repository,
+    analyzer: { analyze: async () => { analyzed = true; throw new Error('Must not analyze over quota.'); } },
+    quota: { consume: async () => false },
+    cache: { get: async () => null, set: async () => undefined },
+    nodeEnv: 'test',
+  });
+  await assert.rejects(service.submit(3, 12, { transcript, durationSec: 60 }), { code: 'EXPLAIN_RATE_LIMIT' });
+  assert.equal(analyzed, false);
 });
 
 test('Explain service caches valid Gemini analysis in development', async () => {

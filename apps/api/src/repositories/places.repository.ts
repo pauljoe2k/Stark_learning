@@ -18,6 +18,37 @@ export class PrismaPlacesRepository {
     });
   }
 
+  listDueFlags(userId: number, now: Date) {
+    return this.prisma.flag.findMany({
+      where: {
+        place: { is: { userId } },
+        OR: [{ nextReviewAt: null }, { nextReviewAt: { lte: now } }],
+      },
+      include: { place: { select: { id: true, name: true, imageUrl: true } } },
+      orderBy: [{ nextReviewAt: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  findOwnedFlag(userId: number, id: number) {
+    return this.prisma.flag.findFirst({
+      where: { id, place: { is: { userId } } },
+    });
+  }
+
+  async scheduleFlagReview(userId: number, id: number, data: {
+    reviewIntervalDays: number;
+    reviewEase: number;
+    nextReviewAt: Date;
+    lastReviewedAt: Date;
+  }) {
+    const updated = await this.prisma.flag.updateMany({
+      where: { id, place: { is: { userId } } },
+      data,
+    });
+    if (updated.count !== 1) return null;
+    return this.findOwnedFlag(userId, id);
+  }
+
   createPlace(userId: number, input: { name: string; imageUrl: string }) {
     return this.prisma.place.create({ data: { userId, ...input } });
   }
@@ -33,12 +64,6 @@ export class PrismaPlacesRepository {
 
   deletePlace(userId: number, id: number) {
     return this.prisma.place.deleteMany({ where: { id, userId } });
-  }
-
-  findOwnedFlag(userId: number, id: number) {
-    return this.prisma.flag.findFirst({
-      where: { id, place: { is: { userId } } },
-    });
   }
 
   findOwnedTopicKeyPoints(userId: number, topicId: number) {
@@ -81,6 +106,45 @@ export class PrismaPlacesRepository {
   deleteFlag(userId: number, id: number) {
     return this.prisma.flag.deleteMany({
       where: { id, place: { is: { userId } } },
+    });
+  }
+
+  async createShare(userId: number, placeId: number, tokenHash: string) {
+    return this.prisma.$transaction(async (transaction) => {
+      const place = await transaction.place.findFirst({ where: { id: placeId, userId }, select: { id: true } });
+      if (!place) return null;
+      await transaction.placeShare.updateMany({
+        where: { placeId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      return transaction.placeShare.create({ data: { placeId, tokenHash } });
+    });
+  }
+
+  async revokeShare(userId: number, placeId: number) {
+    return this.prisma.placeShare.updateMany({
+      where: { placeId, revokedAt: null, place: { is: { userId } } },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  findActiveShare(userId: number, placeId: number) {
+    return this.prisma.placeShare.findFirst({
+      where: { placeId, revokedAt: null, place: { is: { userId } } },
+      select: { id: true, createdAt: true },
+    });
+  }
+
+  findSharedPlace(tokenHash: string) {
+    return this.prisma.placeShare.findFirst({
+      where: { tokenHash, revokedAt: null },
+      include: {
+        place: {
+          include: {
+            flags: { orderBy: { createdAt: 'asc' } },
+          },
+        },
+      },
     });
   }
 }

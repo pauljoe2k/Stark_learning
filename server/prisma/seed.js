@@ -1,24 +1,4 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-try {
-  await prisma.user.upsert({
-    where: { id: 1 },
-    update: { email: 'demo@pinpoint.app' },
-    create: { id: 1, email: 'demo@pinpoint.app' },
-  });
-  await prisma.user.upsert({
-    where: { id: 2 },
-    update: { email: 'demo2@pinpoint.app' },
-    create: { id: 2, email: 'demo2@pinpoint.app' },
-  });
-  console.log('Seeded demo@pinpoint.app and demo2@pinpoint.app');
-} finally {
-  await prisma.$disconnect();
-}
-import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 

@@ -28,6 +28,9 @@ export function createPlacesRouter(service: PlacesService): Router {
   const controller = createPlacesController(service);
   router.get('/', controller.list);
   router.post('/', handlePlaceImage, controller.create);
+  router.get('/:id/share', controller.shareStatus);
+  router.post('/:id/share', controller.createShare);
+  router.delete('/:id/share', controller.revokeShare);
   router.get('/:id', controller.get);
   router.patch('/:id', controller.rename);
   router.delete('/:id', controller.delete);

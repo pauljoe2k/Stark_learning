@@ -156,6 +156,46 @@ Authenticated endpoints:
 | `PATCH` | `/flags/:id` | Edit a flag, including its position or topic/key-point link |
 | `DELETE` | `/flags/:id` | Delete an owned flag |
 
+## Phase 4: Recall, review, and sharing
+
+The Home dashboard summarizes topics, places, and due flags, and points to the
+next step in the learning loop. In a place, **Walk through** visits flags in
+creation order. A share link is read-only; creating another link rotates the
+previous one, and the owner can revoke the active link at any time. The API
+stores only a SHA-256 hash of each random share token. Public responses include
+the place photo and flag display text, not the linked topic notes.
+
+Recall supports a per-flag timer, an optional speed round, typed self-grading,
+and spoken answers checked by Gemini. If Gemini is not configured, voice
+checking returns an explicit error; typed self-grading remains available.
+Correct answers lengthen the next review interval and incorrect answers make
+the flag due again sooner. Flags without a review history appear in the due
+queue immediately.
+
+The Recall tab can save a flashcard snapshot in browser storage for review
+without a network connection. The production service worker caches the app
+shell and same-origin assets after the first online visit. The snapshot and
+cached profile remain on that browser/device; use offline review only on a
+trusted device.
+
+Authenticated endpoints:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/flags/due` | List due flags owned by the signed-in user |
+| `POST` | `/flags/:id/review` | Record a correct/incorrect review and reschedule the flag |
+| `GET` | `/recall/offline` | Download the user's place names and flag prompts/answers |
+| `POST` | `/recall/start` | Start a timed round with the selected time limit and speed setting |
+| `POST` | `/recall/:roundId/reveal` | Reveal one flag's answer during a round |
+| `POST` | `/recall/:roundId/result` | Save a self-graded result |
+| `POST` | `/recall/:roundId/voice-answer` | Submit a transcript for AI checking |
+| `POST` | `/recall/:roundId/finish` | Finish a round and mark unanswered flags for review |
+| `GET`, `POST`, `DELETE` | `/places/:id/share` | Check, create/rotate, or revoke a read-only share link |
+| `GET` | `/shared/:token` | Read a shared place and its flags without signing in |
+
+The new Prisma migration is applied by the normal `npm run db:migrate` command
+or Docker startup. It does not require resetting the development database.
+
 Example:
 
 ```powershell

@@ -15,7 +15,7 @@ export default function RecallBoard({ place, flags, outcomes, activeId, onPick, 
               onClick={() => onPick(flag)}
               disabled={Boolean(result) || Boolean(activeId)}
               aria-label={result ? `Flag ${index + 1}: ${result === 'green' ? 'recalled' : 'missed'}` : `Recall flag ${index + 1}`}
-              className={`absolute flex min-h-11 min-w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-90 ${color} ${activeId === flag.id ? 'ring-4 ring-yellow-300' : ''}`}
+              className={`recall-flag-marker absolute flex min-h-11 min-w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-90 ${color} ${activeId === flag.id ? 'ring-4 ring-yellow-300' : ''}`}
               style={{ left: `${flag.x}%`, top: `${flag.y}%` }}
             >
               {result ? <span className="text-xs font-bold">{result === 'green' ? '✓' : '✕'}</span> : hidden ? <span className="text-xs font-bold">{index + 1}</span> : <MapPin aria-hidden="true" size={20} />}

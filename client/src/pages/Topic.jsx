@@ -15,6 +15,7 @@ import {
 export default function Topic() {
   const [search, setSearch] = useSearchParams();
   const selectedId = search.get('selected');
+  const requestedUnitId = search.get('unit');
   const { data: topics = [], isLoading, isError, error } = useTopics();
   const { data: units = [] } = useUnits();
   const selectedQuery = useTopic(selectedId);
@@ -42,6 +43,12 @@ export default function Topic() {
     setKeyPoints(selectedQuery.data.keyPoints ?? []);
     setUnitId(selectedQuery.data.unitId ? String(selectedQuery.data.unitId) : '');
   }, [selectedQuery.data]);
+
+  useEffect(() => {
+    if (selectedId || !requestedUnitId || !topics.length) return;
+    const firstUnitTopic = topics.find((topic) => String(topic.unitId) === requestedUnitId);
+    if (firstUnitTopic) setSearch({ selected: String(firstUnitTopic.id) }, { replace: true });
+  }, [requestedUnitId, selectedId, setSearch, topics]);
 
   async function create(event) {
     event.preventDefault();

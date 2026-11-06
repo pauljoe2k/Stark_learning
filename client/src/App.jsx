@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useSession, SessionProvider } from './lib/SessionContext.jsx';
 import BottomBar from './components/BottomBar.jsx';
+import ExamCalendar from './components/ExamCalendar.jsx';
 import Home from './pages/Home.jsx';
 import Topic from './pages/Topic.jsx';
 import Explain from './pages/Explain.jsx';
@@ -35,7 +36,14 @@ export default function App() {
 
 function AuthenticatedApp() {
   const { user, ready, logout } = useSession();
-  if (!ready) return <main className="p-8 text-center text-slate-600">Loading Pinpoint...</main>;
+  const location = useLocation();
+  if (!ready) return (
+    <main className="mx-auto max-w-5xl space-y-4 p-8" role="status" aria-label="Loading Pinpoint">
+      <div className="skeleton h-12 rounded-xl" />
+      <div className="skeleton h-56 rounded-3xl" />
+      <div className="skeleton h-64 rounded-2xl" />
+    </main>
+  );
   if (!user) return <Navigate to="/login" replace />;
   return (
     <div className="min-h-screen">
@@ -49,15 +57,20 @@ function AuthenticatedApp() {
         </div>
       </header>
       <BottomBar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/topic" element={<Topic />} />
-        <Route path="/explain" element={<Explain />} />
-        <Route path="/palace" element={<Palace />} />
-        <Route path="/palace/:id" element={<PlaceView />} />
-        <Route path="/recall" element={<Recall />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div className="app-layout mx-auto max-w-[1500px] gap-7 px-0 sm:px-5 lg:px-8">
+        <div key={location.pathname} className="min-w-0 flex-1 page-enter">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/topic" element={<Topic />} />
+            <Route path="/explain" element={<Explain />} />
+            <Route path="/palace" element={<Palace />} />
+            <Route path="/palace/:id" element={<PlaceView />} />
+            <Route path="/recall" element={<Recall />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+        <ExamCalendar />
+      </div>
     </div>
   );
 }

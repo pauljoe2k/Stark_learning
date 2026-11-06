@@ -114,19 +114,51 @@ export const updateFlagBodySchema = createFlagBodySchema.partial().extend({
 }).strict();
 
 export const startRecallBodySchema = z.object({
-  timeLimitSec: z.number().int().min(5).max(300),
+  timeLimitSec: z.number().int().min(5).max(600),
+  speedMode: z.boolean().default(false),
 }).strict();
 
 export const recallResultBodySchema = z.object({
   flagId: positiveIdSchema,
   result: z.enum(['green', 'red']),
-  secondsTaken: z.number().int().min(0).max(300),
+  secondsTaken: z.number().int().min(0).max(600),
+}).strict();
+
+export const recallVoiceAnswerBodySchema = z.object({
+  flagId: positiveIdSchema,
+  transcript: z.string().trim().min(1).max(3000),
+  secondsTaken: z.number().int().min(0).max(600),
+}).strict();
+
+export const reviewFlagBodySchema = z.object({
+  grade: z.enum(['correct', 'incorrect']),
+}).strict();
+
+export const shareTokenParamsSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/i),
 }).strict();
 
 export const createExamBodySchema = z.object({
   unitId: positiveIdSchema.optional(),
   title: z.string().trim().min(1).max(160),
   examDate: z.string().datetime(),
+}).strict();
+
+export const topicTasksSchema = z.object({
+  addMaterial: z.boolean(),
+  explain: z.boolean(),
+  pin: z.boolean(),
+  recall: z.boolean(),
+}).strict();
+
+export const dashboardTopicSchema = z.object({
+  topicId: z.number().int(),
+  title: z.string(),
+  tasks: topicTasksSchema,
+}).strict();
+
+export const dashboardResponseSchema = z.object({
+  topics: z.array(dashboardTopicSchema),
 }).strict();
 
 export type SignupBody = z.infer<typeof signupBodySchema>;
@@ -142,4 +174,8 @@ export type CreateFlagBody = z.infer<typeof createFlagBodySchema>;
 export type UpdateFlagBody = z.infer<typeof updateFlagBodySchema>;
 export type StartRecallBody = z.infer<typeof startRecallBodySchema>;
 export type RecallResultBody = z.infer<typeof recallResultBodySchema>;
+export type RecallVoiceAnswerBody = z.infer<typeof recallVoiceAnswerBodySchema>;
 export type CreateExamBody = z.infer<typeof createExamBodySchema>;
+export type TopicTasks = z.infer<typeof topicTasksSchema>;
+export type DashboardTopic = z.infer<typeof dashboardTopicSchema>;
+export type DashboardResponse = z.infer<typeof dashboardResponseSchema>;

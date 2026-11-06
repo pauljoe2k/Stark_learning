@@ -16,6 +16,11 @@ import { createExplainRouter } from './routes/explain.routes.js';
 import type { PlacesService } from './services/places.service.js';
 import { createPlacesRouter } from './routes/places.routes.js';
 import { createFlagsRouter } from './routes/flags.routes.js';
+import { createSharedPlacesRouter } from './routes/shared-places.routes.js';
+import type { RecallService } from './services/recall.service.js';
+import { createRecallRouter } from './routes/recall.routes.js';
+import type { DashboardService } from './services/dashboard.service.js';
+import { createDashboardRouter } from './routes/dashboard.routes.js';
 
 export interface AppDependencies {
   authService: AuthService;
@@ -30,6 +35,8 @@ export interface AppDependencies {
   };
   explain?: ExplainService;
   palace?: PlacesService;
+  recall?: RecallService;
+  dashboard?: DashboardService;
   webOrigin: string;
 }
 
@@ -53,7 +60,10 @@ export function createApp(dependencies: AppDependencies): Express {
   if (dependencies.palace) {
     app.use('/places', auth, createPlacesRouter(dependencies.palace));
     app.use('/flags', auth, createFlagsRouter(dependencies.palace));
+    app.use('/shared', createSharedPlacesRouter(dependencies.palace));
   }
+  if (dependencies.recall) app.use('/recall', auth, createRecallRouter(dependencies.recall));
+  if (dependencies.dashboard) app.use('/dashboard', auth, createDashboardRouter(dependencies.dashboard));
 
   app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
   app.get('/ready', async (_req, res, next) => {

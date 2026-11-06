@@ -72,5 +72,28 @@ export function createPlacesController(service: PlacesService) {
         next(error);
       }
     },
+    shareStatus: async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.status(200).json({ share: await service.shareStatus(userIdFrom(req), placeIdFrom(req)) });
+      } catch (error) {
+        next(error);
+      }
+    },
+    createShare: async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const token = await service.createShare(userIdFrom(req), placeIdFrom(req));
+        res.status(201).json({ token });
+      } catch (error) {
+        next(error);
+      }
+    },
+    revokeShare: async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        await service.revokeShare(userIdFrom(req), placeIdFrom(req));
+        res.status(204).end();
+      } catch (error) {
+        next(error);
+      }
+    },
   };
 }

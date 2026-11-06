@@ -2,12 +2,16 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { BookOpen, Home, MapPin, Mic2, RotateCcw, Signal, SignalZero, LogOut } from 'lucide-react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
+import { sharedPlaceTokenFromPath } from './lib/shared-place-route';
 import { SocketProvider, useSocket } from './socket';
 import { LoginPage } from './pages/LoginPage';
 import { TopicPage } from './pages/TopicPage';
 import { ExplainPage } from './pages/ExplainPage';
 import { PalacePage } from './pages/PalacePage';
 import { PlaceViewPage } from './pages/PlaceViewPage';
+import { RecallPage } from './pages/RecallPage';
+import { SharedPlacePage } from './pages/SharedPlacePage';
+import { HomePage } from './pages/HomePage';
 
 const tabs = [
   { to: '/', label: 'Home', icon: Home },
@@ -32,6 +36,9 @@ function AppRoutes() {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
 
+  if (location.pathname.startsWith('/shared/')) {
+    return <SharedPlacePage token={sharedPlaceTokenFromPath(location.pathname)} />;
+  }
   if (location.pathname === '/login') return user ? <Navigate to="/" replace /> : <LoginPage />;
   if (loading) {
     return <main className="shell-loading" aria-label="Loading Pinpoint"><div className="skeleton-block" /></main>;
@@ -57,12 +64,12 @@ function AppRoutes() {
             transition={{ duration: 0.24 }}
           >
             <Routes location={location}>
-              <Route path="/" element={<ShellPage title="Home" description="Your learning journey starts here." />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/topic" element={<TopicPage />} />
               <Route path="/explain" element={<ExplainPage />} />
               <Route path="/palace" element={<PalacePage />} />
               <Route path="/palace/:id" element={<PlaceViewPage />} />
-              <Route path="/recall" element={<ShellPage title="Recall" description="Practice remembering what you pinned." />} />
+              <Route path="/recall" element={<RecallPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </motion.div>
@@ -94,15 +101,4 @@ function ConnectionBadge() {
 function LogoutButton() {
   const { logout } = useAuth();
   return <button className="icon-button logout-button" type="button" onClick={logout} aria-label="Sign out"><LogOut size={18} /></button>;
-}
-
-function ShellPage({ title, description }: { title: string; description: string }) {
-  return (
-    <section className="welcome-panel">
-      <span className="eyebrow">PINPOINT / {title.toUpperCase()}</span>
-      <h1>{title}</h1>
-      <p>{description}</p>
-      <div className="phase-note">This area is ready for its feature phase.</div>
-    </section>
-  );
 }

@@ -1,6 +1,6 @@
 import { prisma } from '../services/prisma.js';
 import { daysUntil, countdownTone } from '../services/countdown.js';
-import { buildTopicTasks } from '../services/tasks.js';
+import { buildTopicTasks, calculateRecallStreak } from '../services/tasks.js';
 
 export async function getDashboard(req, res) {
   const [user, units, topics, exams, recallRounds] = await Promise.all([
@@ -46,5 +46,6 @@ export async function getDashboard(req, res) {
       tone: countdownTone(daysLeft),
     } : null,
     pass_mark: user.passMark,
+    streak_days: calculateRecallStreak(recallRounds),
   });
 }

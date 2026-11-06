@@ -39,21 +39,21 @@ model Unit {
 }
 
 model Topic {
-  id                Int           @id @default(autoincrement())
-  userId            Int           @map("user_id")
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  unitId            Int?          @map("unit_id")
-  unit              Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  title             String        @db.VarChar(160)
-  notes             String        @default("") @db.Text
-  keyPointsJson     Json          @default("[]") @map("key_points_json")
-  nextKeyPointId    Int           @default(1) @map("next_key_point_id")
-  mastery           Int           @default(0)
-  topicFiles        TopicFile[]
-  explanations      Explanation[]
-  flags             Flag[]
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  id             Int           @id @default(autoincrement())
+  userId         Int           @map("user_id")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitId         Int?          @map("unit_id")
+  unit           Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  title          String        @db.VarChar(160)
+  notes          String        @default("") @db.Text
+  keyPointsJson  Json          @default("[]") @map("key_points_json")
+  nextKeyPointId Int           @default(1) @map("next_key_point_id")
+  mastery        Int           @default(0)
+  topicFiles     TopicFile[]
+  explanations   Explanation[]
+  flags          Flag[]
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([unitId])
@@ -90,39 +90,57 @@ model Explanation {
 }
 
 model Place {
-  id        Int        @id @default(autoincrement())
-  userId    Int        @map("user_id")
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String     @db.VarChar(80)
-  imageUrl  String     @map("image_url")
+  id        Int           @id @default(autoincrement())
+  userId    Int           @map("user_id")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String        @db.VarChar(80)
+  imageUrl  String        @map("image_url")
   flags     Flag[]
   rounds    RecallRound[]
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  shares    PlaceShare[]
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
 
   @@index([userId])
   @@map("places")
 }
 
 model Flag {
-  id         Int            @id @default(autoincrement())
-  placeId    Int            @map("place_id")
-  place      Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  topicId    Int?           @map("topic_id")
-  topic      Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  keyPointId Int?           @map("key_point_id")
-  x          Float
-  y          Float
-  title      String         @db.VarChar(120)
-  note       String?        @db.VarChar(2000)
-  emoji      String?        @db.VarChar(8)
-  results    RecallResult[]
-  createdAt  DateTime       @default(now()) @map("created_at")
-  updatedAt  DateTime       @updatedAt @map("updated_at")
+  id                 Int            @id @default(autoincrement())
+  placeId            Int            @map("place_id")
+  place              Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  topicId            Int?           @map("topic_id")
+  topic              Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  keyPointId         Int?           @map("key_point_id")
+  x                  Float
+  y                  Float
+  title              String         @db.VarChar(120)
+  note               String?        @db.VarChar(2000)
+  emoji              String?        @db.VarChar(8)
+  reviewIntervalDays Int            @default(0) @map("review_interval_days")
+  reviewEase         Float          @default(2.5) @map("review_ease")
+  nextReviewAt       DateTime?      @map("next_review_at")
+  lastReviewedAt     DateTime?      @map("last_reviewed_at")
+  results            RecallResult[]
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
 
   @@index([placeId])
   @@index([topicId])
+  @@index([nextReviewAt])
   @@map("flags")
+}
+
+model PlaceShare {
+  id        Int       @id @default(autoincrement())
+  placeId   Int       @map("place_id")
+  place     Place     @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  @@index([placeId])
+  @@map("place_shares")
 }
 
 model RecallRound {
@@ -132,6 +150,7 @@ model RecallRound {
   placeId      Int            @map("place_id")
   place        Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
   timeLimitSec Int            @map("time_limit_sec")
+  speedMode    Boolean        @default(false) @map("speed_mode")
   startedAt    DateTime       @default(now()) @map("started_at")
   finishedAt   DateTime?      @map("finished_at")
   results      RecallResult[]
@@ -142,14 +161,17 @@ model RecallRound {
 }
 
 model RecallResult {
-  id           Int         @id @default(autoincrement())
-  roundId      Int         @map("round_id")
-  round        RecallRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
-  flagId       Int         @map("flag_id")
-  flag         Flag        @relation(fields: [flagId], references: [id], onDelete: Cascade)
-  result       String      @db.VarChar(10)
-  secondsTaken Int         @map("seconds_taken")
-  createdAt    DateTime    @default(now()) @map("created_at")
+  id              Int         @id @default(autoincrement())
+  roundId         Int         @map("round_id")
+  round           RecallRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  flagId          Int         @map("flag_id")
+  flag            Flag        @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  result          String      @db.VarChar(10)
+  secondsTaken    Int         @map("seconds_taken")
+  voiceTranscript String?     @map("voice_transcript") @db.Text
+  aiFeedback      String?     @map("ai_feedback") @db.Text
+  gradingSource   String?     @map("grading_source") @db.VarChar(12)
+  createdAt       DateTime    @default(now()) @map("created_at")
 
   @@unique([roundId, flagId])
   @@index([flagId])

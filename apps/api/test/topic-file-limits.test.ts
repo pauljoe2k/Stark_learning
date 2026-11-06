@@ -40,6 +40,31 @@ test('concurrent topic uploads cannot exceed the two-page limit', {
     assert.equal(results.filter((result) => result.status === 'created').length, 1);
     assert.equal(results.filter((result) => result.status === 'page_limit').length, 1);
     assert.equal(await prisma.topicFile.count({ where: { topicId: topic.id } }), 1);
+
+    const imageTopic = await prisma.topic.create({
+      data: { userId: user.id, title: 'Image limit', keyPointsJson: [] },
+    });
+    const firstImage = await repository.createTopicFileWithinLimits(user.id, {
+      topicId: imageTopic.id,
+      fileUrl: `https://example.test/${marker}-one.png`,
+      type: 'image/png',
+      pageCount: 1,
+    });
+    const secondImage = await repository.createTopicFileWithinLimits(user.id, {
+      topicId: imageTopic.id,
+      fileUrl: `https://example.test/${marker}-two.png`,
+      type: 'image/png',
+      pageCount: 1,
+    });
+    const thirdImage = await repository.createTopicFileWithinLimits(user.id, {
+      topicId: imageTopic.id,
+      fileUrl: `https://example.test/${marker}-three.png`,
+      type: 'image/png',
+      pageCount: 1,
+    });
+    assert.equal(firstImage.status, 'created');
+    assert.equal(secondImage.status, 'created');
+    assert.notEqual(thirdImage.status, 'created');
   } finally {
     if (userId !== undefined) await prisma.user.delete({ where: { id: userId } });
     await prisma.$disconnect();

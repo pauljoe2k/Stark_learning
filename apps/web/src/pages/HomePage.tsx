@@ -1,12 +1,24 @@
-import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, BookOpen, Clock3, MapPin, Mic2, Plus, RotateCcw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight, BookOpen, Check, Circle, Clock3, MapPin, Mic2, Plus, RotateCcw } from 'lucide-react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import type { TopicTasks } from '@pinpoint/shared';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { MasteryRing } from '../components/MasteryRing';
+import { useSocket } from '../socket';
+
+const taskRows: ReadonlyArray<{ key: keyof TopicTasks; label: string; to: string }> = [
+  { key: 'addMaterial', label: 'Add material', to: '/topic' },
+  { key: 'explain', label: 'Explain it', to: '/explain' },
+  { key: 'pin', label: 'Pin it', to: '/palace' },
+  { key: 'recall', label: 'Recall it', to: '/recall' },
+];
 
 export function HomePage() {
   const { token, user } = useAuth();
+  const queryClient = useQueryClient();
+  const { socket } = useSocket();
   const topicsQuery = useQuery({
     queryKey: ['topics', token],
     queryFn: async () => {
@@ -31,6 +43,26 @@ export function HomePage() {
     },
     enabled: Boolean(token),
   });
+  const dashboardQuery = useQuery({
+    queryKey: ['dashboard', token],
+    queryFn: async () => {
+      if (!token) throw new Error('Sign in to load tasks.');
+      return api.dashboard(token);
+    },
+    enabled: Boolean(token),
+  });
+  useEffect(() => {
+    if (!socket) return;
+    const invalidateDashboard = () => {
+      void queryClient.invalidateQueries({ queryKey: ['dashboard', token] });
+    };
+    socket.on('dashboard:updated', invalidateDashboard);
+    return () => {
+      socket.off('dashboard:updated', invalidateDashboard);
+    };
+  }, [socket, queryClient, token]);
+
+  const tasksByTopic = new Map((dashboardQuery.data?.topics ?? []).map((item) => [item.topicId, item.tasks]));
 
   const topics = topicsQuery.data ?? [];
   const places = placesQuery.data ?? [];
@@ -112,14 +144,36 @@ export function HomePage() {
         {topicsQuery.isSuccess && topics.length === 0 && (
           <div className="home-empty"><p>Your learning space is ready when you are.</p><Link className="text-button" to="/topic">Create a topic <ArrowRight size={15} /></Link></div>
         )}
-        {topics.slice(0, 4).map((topic) => (
-          <article className="home-topic-row" key={topic.id}>
-            <span className="home-topic-mark"><BookOpen size={17} aria-hidden="true" /></span>
-            <div><h3>{topic.title}</h3><p>{topic.unit?.title ?? 'Unsorted'} · {topic.keyPoints.length} key {topic.keyPoints.length === 1 ? 'idea' : 'ideas'} · {topic.topicFiles.length} {topic.topicFiles.length === 1 ? 'file' : 'files'}</p></div>
-            <MasteryRing value={topic.mastery ?? 0} size={56} />
-            <Link className="text-button" to="/explain" aria-label={`Explain ${topic.title}`}>Explain <ArrowRight size={15} /></Link>
-          </article>
-        ))}
+        {topics.slice(0, 4).map((topic) => {
+          const tasks = tasksByTopic.get(topic.id);
+          const nextTask = taskRows.find(({ key }) => !(tasks?.[key] ?? false));
+          return (
+            <article className="home-topic-row" key={topic.id}>
+              <span className="home-topic-mark"><BookOpen size={17} aria-hidden="true" /></span>
+              <div>
+                <h3>{topic.title}</h3><p>{topic.unit?.title ?? 'Unsorted'} · {topic.keyPoints.length} key {topic.keyPoints.length === 1 ? 'idea' : 'ideas'} · {topic.topicFiles.length} {topic.topicFiles.length === 1 ? 'file' : 'files'}</p>
+                <ul className="home-task-list">
+                  {taskRows.map(({ key, label }) => {
+                    const done = Boolean(tasks?.[key]);
+                    return (
+                      <li key={key} className={done ? 'home-task-done' : 'home-task-todo'}>
+                        {done
+                          ? <Check size={14} aria-hidden="true" />
+                          : <Circle size={14} aria-hidden="true" />}
+                        <span>{label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {nextTask && (
+                  <Link className="text-button" to={nextTask.to} aria-label={`Next step for ${topic.title}: ${nextTask.label}`}>Next step <ArrowRight size={15} /></Link>
+                )}
+              </div>
+              <MasteryRing value={topic.mastery ?? 0} size={56} />
+              <Link className="text-button" to="/explain" aria-label={`Explain ${topic.title}`}>Explain <ArrowRight size={15} /></Link>
+            </article>
+          );
+        })}
       </section>
     </section>
   );

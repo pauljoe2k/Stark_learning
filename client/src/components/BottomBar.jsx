@@ -18,8 +18,8 @@ export default function BottomBar() {
             key={to}
             to={to}
             end={end}
-            className={({ isActive }) => `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-xl px-2 text-xs font-semibold transition md:min-w-24 md:flex-row md:gap-2 md:text-sm ${
-              isActive ? 'text-moss' : 'text-slate-600 hover:bg-paper hover:text-ink'
+            className={({ isActive }) => `nav-link flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-xl px-2 text-xs font-semibold transition md:min-w-24 md:flex-row md:gap-2 md:text-sm ${
+              isActive ? 'active-nav-link text-moss' : 'text-slate-600'
             }`}
           >
             {({ isActive }) => <>

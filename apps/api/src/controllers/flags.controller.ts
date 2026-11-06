@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import {
   positiveIdSchema,
   createFlagBodySchema,
+  reviewFlagBodySchema,
   updateFlagBodySchema,
 } from '@pinpoint/shared';
 import { HttpError } from '../errors.js';
@@ -69,6 +70,26 @@ export function createFlagsController(service: PlacesService) {
       try {
         await service.deleteFlag(userIdFrom(req), flagIdFrom(req));
         res.status(204).end();
+      } catch (error) {
+        next(error);
+      }
+    },
+    due: async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.status(200).json({ flags: await service.dueFlags(userIdFrom(req)) });
+      } catch (error) {
+        next(error);
+      }
+    },
+    review: async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const input = reviewFlagBodySchema.safeParse(req.body);
+        if (!input.success) {
+          throw new HttpError(400, input.error.issues[0]?.message ?? 'Choose a review grade.', 'INVALID_REVIEW_GRADE');
+        }
+        res.status(200).json({
+          flag: await service.reviewFlag(userIdFrom(req), flagIdFrom(req), input.data.grade),
+        });
       } catch (error) {
         next(error);
       }

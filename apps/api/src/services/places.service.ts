@@ -1,8 +1,10 @@
 import { Prisma } from '@prisma/client';
+import { createHash, randomBytes } from 'node:crypto';
 import type { WorkerSocketMessage } from '@pinpoint/shared';
 import { logger } from '../logger.js';
 import { HttpError } from '../errors.js';
 import type { PrismaPlacesRepository } from '../repositories/places.repository.js';
+import { scheduleFlagReview, type FlagReviewGrade } from './flag-review.js';
 import type { UploadStorage } from './upload-storage.js';
 
 const maxImageBytes = 10 * 1024 * 1024;
@@ -58,6 +60,25 @@ export class PlacesService {
     };
   }
 
+  async dueFlags(userId: number, now = new Date()) {
+    const flags = await this.dependencies.repository.listDueFlags(userId, now);
+    return flags.map(({ place, ...flag }) => ({ ...flag, place }));
+  }
+
+  async reviewFlag(userId: number, id: number, grade: FlagReviewGrade) {
+    const current = await this.dependencies.repository.findOwnedFlag(userId, id);
+    if (!current) throw new HttpError(404, 'Flag not found.', 'FLAG_NOT_FOUND');
+    const reviewedAt = new Date();
+    const schedule = scheduleFlagReview(current, grade, reviewedAt);
+    const updated = await this.dependencies.repository.scheduleFlagReview(userId, id, {
+      ...schedule,
+      lastReviewedAt: reviewedAt,
+    });
+    if (!updated) throw new HttpError(404, 'Flag not found.', 'FLAG_NOT_FOUND');
+    await this.publishDashboard(userId);
+    return updated;
+  }
+
   async create(userId: number, name: string, file: { buffer: Buffer; mimetype: string }) {
     const mediaType = validatePlaceImage(file);
     const saved = await this.dependencies.storage.saveLocal(file.buffer, mediaType);
@@ -95,6 +116,42 @@ export class PlacesService {
     const deleted = await this.dependencies.repository.deletePlace(userId, id);
     if (deleted.count !== 1) throw new HttpError(404, 'Place not found.', 'PLACE_NOT_FOUND');
     await this.publishDashboard(userId);
+  }
+
+  async createShare(userId: number, placeId: number): Promise<string> {
+    const token = randomBytes(32).toString('hex');
+    const share = await this.dependencies.repository.createShare(
+      userId,
+      placeId,
+      createHash('sha256').update(token).digest('hex'),
+    );
+    if (!share) throw new HttpError(404, 'Place not found.', 'PLACE_NOT_FOUND');
+    return token;
+  }
+
+  async revokeShare(userId: number, placeId: number): Promise<void> {
+    await this.requirePlace(userId, placeId);
+    await this.dependencies.repository.revokeShare(userId, placeId);
+  }
+
+  async shareStatus(userId: number, placeId: number) {
+    await this.requirePlace(userId, placeId);
+    const share = await this.dependencies.repository.findActiveShare(userId, placeId);
+    return share ? { active: true as const, createdAt: share.createdAt.toISOString() } : { active: false as const };
+  }
+
+  async getShared(token: string) {
+    const share = await this.dependencies.repository.findSharedPlace(
+      createHash('sha256').update(token).digest('hex'),
+    );
+    if (!share) throw new HttpError(404, 'This shared palace is unavailable.', 'SHARE_NOT_FOUND');
+    const { place } = share;
+    return {
+      id: place.id,
+      name: place.name,
+      imageUrl: place.imageUrl,
+      flags: place.flags.map(({ id, x, y, title, note, emoji }) => ({ id, x, y, title, note, emoji })),
+    };
   }
 
   async createFlag(userId: number, input: {

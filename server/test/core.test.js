@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateScore } from '../src/services/scoring.js';
 import { daysUntil, countdownTone } from '../src/services/countdown.js';
-import { buildTopicTasks } from '../src/services/tasks.js';
+import { buildTopicTasks, calculateRecallStreak } from '../src/services/tasks.js';
 import { fallbackAnalysis } from '../src/ai/keywordFallback.js';
 import { extractionSchema } from '../src/ai/validate.js';
+import { errorHandler } from '../src/middleware/errorHandler.js';
 
 test('explanation scoring uses covered, partial, incorrect and missing weights', () => {
   assert.equal(calculateScore([
@@ -42,6 +43,15 @@ test('dashboard tasks reflect material, score, linked flags and a mostly-green r
   assert.deepEqual(tasks.map((task) => task.done), [true, true, true, true]);
 });
 
+test('recall streak counts consecutive completed days and expires after a missed day', () => {
+  const now = new Date('2026-11-04T20:00:00.000Z');
+  const rounds = ['2026-11-04', '2026-11-03', '2026-11-02', '2026-10-30']
+    .map((day) => ({ finishedAt: new Date(`${day}T08:00:00.000Z`) }));
+  assert.equal(calculateRecallStreak(rounds, now), 3);
+  assert.equal(calculateRecallStreak(rounds.slice(1), now), 2);
+  assert.equal(calculateRecallStreak([{ finishedAt: new Date('2026-10-30T08:00:00.000Z') }], now), 0);
+});
+
 test('keyword fallback returns one result per point and identifies gaps', () => {
   const result = fallbackAnalysis([
     { id: 1, text: 'Chlorophyll absorbs sunlight in the chloroplast.' },
@@ -61,4 +71,23 @@ test('extraction schema accepts five numeric-keyed points and rejects fewer', ()
   };
   assert.equal(extractionSchema.parse(valid).keyPoints.length, 5);
   assert.throws(() => extractionSchema.parse({ ...valid, keyPoints: valid.keyPoints.slice(0, 4) }));
+});
+
+test('malformed JSON request bodies return an actionable client error', () => {
+  let statusCode;
+  let responseBody;
+  const response = {
+    status(code) {
+      statusCode = code;
+      return this;
+    },
+    json(body) {
+      responseBody = body;
+      return this;
+    },
+  };
+  errorHandler({ type: 'entity.parse.failed', status: 400 }, {}, response, () => {});
+  assert.equal(statusCode, 400);
+  assert.match(responseBody.error, /valid JSON/);
+  assert.match(responseBody.error, /numeric placeId/);
 });

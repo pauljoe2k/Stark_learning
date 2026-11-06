@@ -76,8 +76,9 @@ export const mockApi = {
           { id: 'pin', title: 'Pin it', done: places.some((place) => place.flags.some((flag) => flag.topicId === topic.id)) },
           { id: 'recall', title: 'Recall it', done: false },
         ] })),
-        exams: clone(exams), nearest_exam: exams[0] ? { ...clone(exams[0]), days_left: 14, tone: 'calm' } : null,
-        pass_mark: currentUser.passMark,
+        exams: exams.map((exam) => ({ ...clone(exam), unit: clone(units.find((unit) => unit.id === exam.unitId) ?? null) })),
+        nearest_exam: exams[0] ? { ...clone(exams[0]), unit: clone(units.find((unit) => unit.id === exams[0].unitId) ?? null), days_left: 14, tone: 'calm' } : null,
+        pass_mark: currentUser.passMark, streak_days: 3,
       };
     }
 
@@ -188,8 +189,8 @@ export const mockApi = {
     }
 
     if (path === '/exams') {
-      if (method === 'GET') return clone(exams);
-      if (method === 'POST') { const exam = { id: next.exam++, ...clone(data), examDate: data.exam_date }; exams.push(exam); return clone(exam); }
+      if (method === 'GET') return exams.map((exam) => ({ ...clone(exam), unit: clone(units.find((unit) => unit.id === exam.unitId) ?? null) }));
+      if (method === 'POST') { const exam = { id: next.exam++, ...clone(data), examDate: data.exam_date, unitId: data.unitId ?? null }; exams.push(exam); return clone(exam); }
     }
     const examMatch = match(path, 'exams');
     if (examMatch) {
