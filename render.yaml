@@ -1,0 +1,65 @@
+# Render blueprint for the Pinpoint API + queue worker.
+#
+# The API cannot live on Vercel: it needs a long-running process for Socket.IO,
+# a BullMQ worker for upload/extraction jobs, and a Redis connection for both.
+# Vercel serverless gives you none of that. Render (or Railway/Fly) does.
+#
+# Both services build from the SAME Dockerfile with the repo root as context,
+# because the build needs the npm workspaces (@pinpoint/shared).
+#
+# Values marked `sync: false` are secrets you paste in the Render dashboard.
+
+services:
+  - type: web
+    name: pinpoint-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEB_ORIGIN
+        sync: false
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: DEMO_PASSWORD
+        sync: false
+
+  - type: worker
+    name: pinpoint-worker
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: npm run worker:start --workspace @pinpoint/api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: STORAGE_PROVIDER
+        value: local
