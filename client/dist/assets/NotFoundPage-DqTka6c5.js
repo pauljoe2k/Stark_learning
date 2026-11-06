@@ -1,0 +1,6 @@
+import{c as s,j as e,t as o,H as a}from"./index-gbdJ5YZs.js";/**
+ * @license lucide-react v1.66.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const t={name:"compass",size:24,node:[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["path",{d:"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z",key:"9ktpf1"}]]};t.node;const n=s(t);function m(){return e.jsxs("div",{className:"min-h-[70vh] flex flex-col items-center justify-center text-center p-6",children:[e.jsx("div",{className:"h-16 w-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-4",children:e.jsx(n,{className:"w-8 h-8 animate-pulse"})}),e.jsx("h1",{className:"font-display text-4xl font-bold text-foreground",children:"404"}),e.jsx("p",{className:"text-lg font-semibold text-foreground mt-2",children:"Palace room not found"}),e.jsx("p",{className:"text-sm text-muted-foreground mt-1 max-w-sm",children:"The page you are looking for has been moved or doesn't exist in your memory map."}),e.jsxs(o,{to:"/",className:"mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md",children:[e.jsx(a,{className:"w-4 h-4"}),"Return Home"]})]})}export{m as default};

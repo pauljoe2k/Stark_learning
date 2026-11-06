@@ -12,7 +12,7 @@
 
 Pinpoint helps students learn faster by combining two proven techniques in one loop: speaking a topic out loud to expose gaps (active recall), and pinning each idea to a photo of a familiar place so it sticks (memory palace).
 
-> Built for a hackathon by a team of two. Stack: PostgreSQL, Express, React, Node (PERN), plus the Gemini API.
+> Built for a hackathon by a team of three. Stack: PostgreSQL, Express, React, Node (PERN), plus the Gemini API.
 
 ---
 
