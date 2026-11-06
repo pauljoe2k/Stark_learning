@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "start:all": "node scripts/start.mjs",
+    "start:all": "bash scripts/start.sh",
     "install:all": "npm install",
     "install:legacy": "npm install --prefix server && npm install --prefix client",
     "dev:all": "npm run build --workspace @pinpoint/shared && node scripts/dev-all.mjs",
