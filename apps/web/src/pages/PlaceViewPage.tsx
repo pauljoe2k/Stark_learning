@@ -1,0 +1,325 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Link2, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import type { CreateFlagBody } from '@pinpoint/shared';
+import { api } from '../api';
+import { useAuth } from '../auth';
+import { FlagPanel } from '../components/palace/FlagPanel';
+import { PlaceCanvas, type FlagPosition } from '../components/palace/PlaceCanvas';
+import {
+  useCreateFlag,
+  useDeleteFlag,
+  useDeletePlace,
+  usePlace,
+  useRenamePlace,
+  useUpdateFlag,
+} from '../hooks/usePlaces';
+
+type FlagDraft = Omit<CreateFlagBody, 'placeId' | 'topicId' | 'keyPointId'>
+  & { topicId?: number | null; keyPointId?: number | null };
+
+export function PlaceViewPage() {
+  const { id: routeId } = useParams();
+  const placeId = Number(routeId);
+  const validPlaceId = Number.isInteger(placeId) && placeId > 0;
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const placeQuery = usePlace(validPlaceId ? placeId : undefined);
+  const [addMode, setAddMode] = useState(false);
+  const [draftPosition, setDraftPosition] = useState<FlagPosition | null>(null);
+  const [selectedFlagId, setSelectedFlagId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [walkthroughIndex, setWalkthroughIndex] = useState<number | null>(null);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareError, setShareError] = useState('');
+  const [sharing, setSharing] = useState(false);
+
+  const topicsQuery = useQuery({
+    queryKey: ['topics', token],
+    queryFn: async () => {
+      if (!token) throw new Error('Sign in to load topics.');
+      return (await api.topics(token)).topics;
+    },
+    enabled: Boolean(token),
+  });
+  const shareQuery = useQuery({
+    queryKey: ['place-share', token, placeId],
+    queryFn: async () => {
+      if (!token) throw new Error('Sign in to manage this share link.');
+      return (await api.placeShareStatus(token, placeId)).share;
+    },
+    enabled: Boolean(token && validPlaceId),
+  });
+  const renameMutation = useRenamePlace(placeId);
+  const deletePlaceMutation = useDeletePlace(placeId);
+  const createFlagMutation = useCreateFlag(placeId);
+  const updateFlagMutation = useUpdateFlag(placeId);
+  const deleteFlagMutation = useDeleteFlag(placeId);
+  const place = placeQuery.data;
+  const selectedFlag = place?.flags.find((flag) => flag.id === selectedFlagId) ?? null;
+
+  useEffect(() => {
+    if (place) setName(place.name);
+  }, [place]);
+
+  async function saveName(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setNameError('');
+    try {
+      await renameMutation.mutateAsync(name.trim());
+      setEditingName(false);
+    } catch (error) {
+      setNameError(error instanceof Error ? error.message : 'The place could not be renamed.');
+    }
+  }
+
+  async function deletePlace(): Promise<void> {
+    if (!place || !window.confirm(`Delete "${place.name}" and all its flags? This cannot be undone.`)) return;
+    try {
+      await deletePlaceMutation.mutateAsync();
+      navigate('/palace');
+    } catch {
+      return;
+    }
+  }
+
+  async function saveFlag(draft: FlagDraft): Promise<void> {
+    if (selectedFlag) {
+      await updateFlagMutation.mutateAsync({ id: selectedFlag.id, changes: draft });
+      return;
+    }
+    const { topicId, keyPointId, ...newFlag } = draft;
+    const created = await createFlagMutation.mutateAsync({
+      ...newFlag,
+      ...(typeof topicId === 'number' ? { topicId } : {}),
+      ...(typeof keyPointId === 'number' ? { keyPointId } : {}),
+    });
+    setDraftPosition(null);
+    setSelectedFlagId(created.id);
+  }
+
+  async function removeFlag(): Promise<void> {
+    if (!selectedFlag) return;
+    await deleteFlagMutation.mutateAsync(selectedFlag.id);
+    setSelectedFlagId(null);
+    setDraftPosition(null);
+  }
+
+  function closePanel(): void {
+    setSelectedFlagId(null);
+    setDraftPosition(null);
+  }
+
+  if (!validPlaceId) {
+    return <PlaceNotFound message="That place address is not valid." />;
+  }
+  if (placeQuery.isPending) {
+    return <section className="place-view-page"><div className="place-view-skeleton" aria-label="Loading place" /></section>;
+  }
+  if (placeQuery.isError || !place) {
+    return <PlaceNotFound message={placeQuery.error instanceof Error ? placeQuery.error.message : 'Place not found.'} />;
+  }
+
+  const saving = createFlagMutation.isPending || updateFlagMutation.isPending;
+  const flagForPanel = selectedFlagId === null ? null : selectedFlag;
+  const panelOpen = draftPosition !== null || selectedFlagId !== null;
+  const canvasSelectedFlagId = walkthroughIndex === null
+    ? selectedFlagId
+    : place.flags[walkthroughIndex]?.id ?? null;
+
+  async function createShareLink(): Promise<void> {
+    if (!token) return;
+    setShareError('');
+    setSharing(true);
+    try {
+      const { token: shareToken } = await api.createPlaceShare(token, placeId);
+      const url = `${window.location.origin}/shared/${shareToken}`;
+      setShareUrl(url);
+      await queryClient.invalidateQueries({ queryKey: ['place-share', token, placeId] });
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        setShareError('The link is ready below, but could not be copied automatically.');
+      }
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : 'The share link could not be created.');
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function revokeShareLink(): Promise<void> {
+    if (!token) return;
+    setShareError('');
+    setSharing(true);
+    try {
+      await api.revokePlaceShare(token, placeId);
+      setShareUrl('');
+      await queryClient.invalidateQueries({ queryKey: ['place-share', token, placeId] });
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : 'The share link could not be revoked.');
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  return (
+    <section className="place-view-page">
+      <header className="place-view-header">
+        <Link className="back-link" to="/palace"><ArrowLeft size={17} aria-hidden="true" /> All places</Link>
+        <div className="place-view-title">
+          {editingName ? (
+            <form className="rename-place-form" onSubmit={(event) => void saveName(event)}>
+              <label className="visually-hidden" htmlFor="rename-place">Place name</label>
+              <input id="rename-place" autoFocus maxLength={80} value={name} onChange={(event) => setName(event.target.value)} />
+              <button type="submit" className="icon-button" disabled={renameMutation.isPending || !name.trim()} aria-label="Save place name">
+                <Check size={17} />
+              </button>
+              <button type="button" className="icon-button" onClick={() => { setEditingName(false); setName(place.name); }} aria-label="Cancel rename">
+                <X size={17} />
+              </button>
+            </form>
+          ) : (
+            <>
+              <h1>{place.name}</h1>
+              <button type="button" className="icon-button rename-place-button" onClick={() => setEditingName(true)} aria-label="Rename place">
+                <Pencil size={16} aria-hidden="true" />
+              </button>
+            </>
+          )}
+        </div>
+        {nameError && <p className="form-error" role="alert">{nameError}</p>}
+        <div className="place-view-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={place.flags.length === 0}
+            onClick={() => {
+              closePanel();
+              setAddMode(false);
+              setWalkthroughIndex(0);
+            }}
+          >
+            <Play size={16} aria-hidden="true" /> Walk through
+          </button>
+          <button type="button" className="secondary-button" disabled={sharing || shareQuery.isPending} onClick={() => void createShareLink()}>
+            <Link2 size={16} aria-hidden="true" /> {sharing ? 'Creating link…' : shareQuery.data?.active ? 'Rotate share link' : 'Create share link'}
+          </button>
+          {shareQuery.data?.active && (
+            <button type="button" className="danger-outline-button" disabled={sharing} onClick={() => void revokeShareLink()}>
+              {sharing ? 'Revoking…' : 'Revoke share link'}
+            </button>
+          )}
+          <button
+            type="button"
+            className={`primary-button${addMode ? ' add-mode-active' : ''}`}
+            onClick={() => {
+              closePanel();
+              setAddMode((current) => !current);
+            }}
+          >
+            {addMode ? <X size={17} aria-hidden="true" /> : <Plus size={18} aria-hidden="true" />}
+            {addMode ? 'Cancel adding' : 'Add flag'}
+          </button>
+          <button
+            type="button"
+            className="danger-outline-button"
+            onClick={() => void deletePlace()}
+            disabled={deletePlaceMutation.isPending}
+          >
+            <Trash2 size={16} aria-hidden="true" /> {deletePlaceMutation.isPending ? 'Deleting…' : 'Delete place'}
+          </button>
+        </div>
+      </header>
+
+      {deletePlaceMutation.isError && <p className="form-error" role="alert">{deletePlaceMutation.error.message}</p>}
+      {updateFlagMutation.isError && !panelOpen && <p className="form-error" role="alert">{updateFlagMutation.error.message}</p>}
+      {shareQuery.isError && <p className="form-error" role="alert">{shareQuery.error.message}</p>}
+      {shareError && <p className="form-error" role="alert">{shareError}</p>}
+      {shareUrl && <label className="share-link-field">Read-only share link<input readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} /><span><Copy size={14} /> Copied when available; you can also copy this URL manually.</span></label>}
+      <div className={`place-view-layout${panelOpen ? ' panel-open' : ''}`}>
+        <div className="place-canvas-column">
+          {place.flags.length === 0 && !addMode && (
+            <p className="place-canvas-hint"><MapPinLabel /> Add a flag, then tap a memorable spot in the photo.</p>
+          )}
+          <PlaceCanvas
+            imageUrl={place.imageUrl}
+            imageAlt={`Photo of ${place.name}`}
+            flags={place.flags}
+            selectedFlagId={canvasSelectedFlagId}
+            addMode={addMode}
+            onDraftPosition={(position) => {
+              setDraftPosition(position);
+              setSelectedFlagId(null);
+              setWalkthroughIndex(null);
+              setAddMode(false);
+            }}
+            onSelectFlag={(flagId) => {
+              setSelectedFlagId(flagId);
+              setWalkthroughIndex(null);
+              setDraftPosition(null);
+              setAddMode(false);
+            }}
+            onReposition={(flagId, position) => {
+              updateFlagMutation.mutate({ id: flagId, changes: position });
+            }}
+          />
+        </div>
+        {panelOpen && (
+          <FlagPanel
+            key={selectedFlag ? `flag-${selectedFlag.id}` : `draft-${draftPosition?.x}-${draftPosition?.y}`}
+            flag={flagForPanel}
+            position={draftPosition}
+            topics={topicsQuery.data ?? []}
+            saving={saving}
+            deleting={deleteFlagMutation.isPending}
+            onClose={closePanel}
+            onSave={saveFlag}
+            onDelete={removeFlag}
+          />
+        )}
+      </div>
+      {walkthroughIndex !== null && place.flags[walkthroughIndex] && (
+        <section className="walkthrough-card" aria-live="polite">
+          <div className="walkthrough-progress">
+            <span className="eyebrow">PLACE WALK-THROUGH</span>
+            <button type="button" className="text-button" onClick={() => setWalkthroughIndex(null)}>Exit</button>
+          </div>
+          <p className="recall-muted">Flag {walkthroughIndex + 1} of {place.flags.length}</p>
+          <h2>{place.flags[walkthroughIndex].emoji ? `${place.flags[walkthroughIndex].emoji} ` : ''}{place.flags[walkthroughIndex].title}</h2>
+          <p>{place.flags[walkthroughIndex].note || 'No note saved for this flag.'}</p>
+          <div className="walkthrough-actions">
+            <button type="button" className="secondary-button" disabled={walkthroughIndex === 0} onClick={() => setWalkthroughIndex((current) => Math.max(0, (current ?? 0) - 1))}>
+              <ChevronLeft size={16} /> Previous
+            </button>
+            <button type="button" className="primary-button" onClick={() => {
+              if (walkthroughIndex + 1 >= place.flags.length) setWalkthroughIndex(null);
+              else setWalkthroughIndex(walkthroughIndex + 1);
+            }}>
+              {walkthroughIndex + 1 === place.flags.length ? 'Finish walkthrough' : <>Next flag <ChevronRight size={16} /></>}
+            </button>
+          </div>
+        </section>
+      )}
+      {topicsQuery.isError && <p className="form-error" role="alert">Topic links could not be loaded: {topicsQuery.error.message}</p>}
+    </section>
+  );
+}
+
+function PlaceNotFound({ message }: { message: string }) {
+  return (
+    <div className="place-not-found" role="alert">
+      <AlertCircle size={20} aria-hidden="true" />
+      <p>{message}</p>
+      <Link to="/palace">Return to your places</Link>
+    </div>
+  );
+}
+
+function MapPinLabel() {
+  return <span aria-hidden="true">Pick a spot</span>;
+}

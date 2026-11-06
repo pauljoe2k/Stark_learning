@@ -1,0 +1,26 @@
+{
+  "name": "pinpoint",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client --",
+    "dev:all": "npm run build --workspace @pinpoint/shared && node scripts/dev-all.mjs",
+    "build": "npm run build --workspace @pinpoint/shared && npm run build --workspace @pinpoint/api && npm run build --workspace @pinpoint/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspace @pinpoint/shared && npm run typecheck --workspace @pinpoint/api && npm run typecheck --workspace @pinpoint/web",
+    "test": "npm run build --workspace @pinpoint/shared && npm run test --workspaces --if-present",
+    "db:generate": "npm run prisma:generate --workspace @pinpoint/api",
+    "db:migrate": "npm run prisma:migrate --workspace @pinpoint/api",
+    "db:seed": "npm run seed --workspace @pinpoint/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "eslint": "^9.20.1",
+    "typescript-eslint": "^8.24.0"
+  }
+}

@@ -1,75 +1,64 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-export function useSpeech({ onTranscriptChange } = {}) {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSupported, setIsSupported] = useState(false);
+export function useSpeech() {
   const recognitionRef = useRef(null);
+  const [supported, setSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [error, setError] = useState('');
+  const [transcript, setTranscript] = useState('');
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setIsSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event) => {
-        let currentTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript + ' ';
-        }
-        setTranscript(currentTranscript.trim());
-        if (onTranscriptChange) onTranscriptChange(currentTranscript.trim());
-      };
-
-      recognition.onerror = (event) => {
-        console.warn('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    } else {
-      setIsSupported(false);
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) return undefined;
+    setSupported(true);
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || 'en-US';
+    recognition.onresult = (event) => {
+      let finalText = '';
+      let interimText = '';
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (result.isFinal) finalText += result[0].transcript;
+        else interimText += result[0].transcript;
       }
+      if (finalText) setTranscript((current) => `${current}${current ? ' ' : ''}${finalText.trim()}`);
+      if (interimText) setError(`Listening: ${interimText}`);
+      else setError('');
     };
-  }, [onTranscriptChange]);
+    recognition.onerror = (event) => {
+      setListening(false);
+      setError(event.error === 'not-allowed' ? 'Microphone access was denied. You can type your explanation instead.' : `Voice input stopped (${event.error}). You can continue by typing.`);
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    return () => {
+      recognition.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
 
-  const startListening = useCallback(() => {
-    if (recognitionRef.current && !isListening) {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn('Could not start speech recognition:', err);
-      }
+  const start = useCallback(() => {
+    if (!recognitionRef.current) return;
+    setError('');
+    try {
+      recognitionRef.current.start();
+      setListening(true);
+    } catch (startError) {
+      if (startError.name !== 'InvalidStateError') setError('Voice input could not start. You can type your explanation instead.');
     }
-  }, [isListening]);
+  }, []);
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  }, [isListening]);
+  const stop = useCallback(() => {
+    recognitionRef.current?.stop();
+    setListening(false);
+  }, []);
 
-  return {
-    isListening,
-    transcript,
-    setTranscript,
-    isSupported,
-    startListening,
-    stopListening,
-  };
+  const clear = useCallback(() => {
+    setTranscript('');
+    setError('');
+  }, []);
+
+  return { supported, listening, error, transcript, setTranscript, start, stop, clear };
 }
-

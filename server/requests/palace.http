@@ -1,0 +1,110 @@
+@base = http://localhost:4000
+@user = 1
+@placeId = 1
+@flagId = 1
+@image = ./tiny.png
+
+### Health
+GET {{base}}/health
+
+### Missing image (expect 400)
+POST {{base}}/places
+x-dev-user-id: {{user}}
+Content-Type: multipart/form-data; boundary=palace
+
+--palace
+Content-Disposition: form-data; name="name"
+
+Palace Test
+--palace--
+
+### Create place with image (expect 201)
+# @name createPlace
+POST {{base}}/places
+x-dev-user-id: {{user}}
+Content-Type: multipart/form-data; boundary=palace
+
+--palace
+Content-Disposition: form-data; name="name"
+
+Palace Test
+--palace
+Content-Disposition: form-data; name="image"; filename="tiny.png"
+Content-Type: image/png
+
+< {{image}}
+--palace--
+
+### List places
+GET {{base}}/places
+x-dev-user-id: {{user}}
+
+### Get a place
+GET {{base}}/places/{{placeId}}
+x-dev-user-id: {{user}}
+
+### Rename a place
+PATCH {{base}}/places/{{placeId}}
+x-dev-user-id: {{user}}
+Content-Type: application/json
+
+{"name":"Renamed Palace"}
+
+### Create flag
+# @name createFlag
+POST {{base}}/flags
+x-dev-user-id: {{user}}
+Content-Type: application/json
+
+{"placeId":{{placeId}},"x":24.5,"y":61,"title":"First flag","note":"First note","emoji":"📍"}
+
+### Create second flag
+POST {{base}}/flags
+x-dev-user-id: {{user}}
+Content-Type: application/json
+
+{"placeId":{{placeId}},"x":70,"y":35,"title":"Second flag"}
+
+### Invalid flag coordinate (expect 400)
+POST {{base}}/flags
+x-dev-user-id: {{user}}
+Content-Type: application/json
+
+{"placeId":{{placeId}},"x":150,"y":20,"title":"Invalid"}
+
+### Missing flag title (expect 400)
+POST {{base}}/flags
+x-dev-user-id: {{user}}
+Content-Type: application/json
+
+{"placeId":{{placeId}},"x":20,"y":20}
+
+### Update a flag
+PATCH {{base}}/flags/{{flagId}}
+x-dev-user-id: {{user}}
+Content-Type: application/json
+
+{"title":"Updated flag"}
+
+### User 2 cannot view the place (expect 404)
+GET {{base}}/places/{{placeId}}
+x-dev-user-id: 2
+
+### User 2 cannot create a flag for the place (expect 404)
+POST {{base}}/flags
+x-dev-user-id: 2
+Content-Type: application/json
+
+{"placeId":{{placeId}},"x":20,"y":20,"title":"Not allowed"}
+
+### User 2 cannot delete the flag (expect 404)
+DELETE {{base}}/flags/{{flagId}}
+x-dev-user-id: 2
+
+### Delete a flag
+DELETE {{base}}/flags/{{flagId}}
+x-dev-user-id: {{user}}
+
+### Delete a place
+DELETE {{base}}/places/{{placeId}}
+x-dev-user-id: {{user}}

@@ -1,48 +1,34 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { mockApi } from './mockApi.js';
 
-export async function apiClient(endpoint, { body, ...customConfig } = {}) {
-  const token = localStorage.getItem('pinpoint_token');
+const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/+$/, '');
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...customConfig.headers,
-  };
+async function request(method, path, data) {
+  if (useMock) return mockApi.request(method, path, data);
 
-  const config = {
-    method: customConfig.method || (body ? 'POST' : 'GET'),
-    headers,
-    ...customConfig,
-  };
-
-  if (body && !(body instanceof FormData)) {
-    config.body = JSON.stringify(body);
-  } else if (body instanceof FormData) {
-    delete headers['Content-Type']; // Let browser set boundary
-    config.body = body;
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}${endpoint}`, config);
-
-    if (res.status === 401) {
-      localStorage.removeItem('pinpoint_token');
-      localStorage.removeItem('pinpoint_user');
-      window.dispatchEvent(new Event('auth:unauthorized'));
-      throw new Error('Session expired. Please sign in again.');
+  const isForm = data instanceof FormData;
+  const token = typeof window === 'undefined' ? null : window.localStorage.getItem('pinpoint-token');
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (data && !isForm) headers['Content-Type'] = 'application/json';
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: Object.keys(headers).length ? headers : undefined,
+    body: data ? (isForm ? data : JSON.stringify(data)) : undefined,
+  });
+  const body = response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      window.localStorage.removeItem('pinpoint-token');
     }
-
-    const data = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      const error = (data && data.message) || res.statusText || 'Request failed';
-      return Promise.reject(new Error(error));
-    }
-
-    return data;
-  } catch (err) {
-    // If backend is offline, return fallback indicator or rethrow
-    return Promise.reject(err);
+    throw new Error(body?.error || `Request failed with status ${response.status}.`);
   }
+  return body;
 }
 
+export const api = {
+  get: (path) => request('GET', path),
+  post: (path, data) => request('POST', path, data),
+  patch: (path, data) => request('PATCH', path, data),
+  delete: (path) => request('DELETE', path),
+};
