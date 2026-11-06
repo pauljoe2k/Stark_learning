@@ -26,7 +26,7 @@ export default function RecallRoundPage() {
       title: "Front Door: Resting Potential (-70mV)",
       keyPoint: "Na+/K+ ATPase and leak channels establish -70mV resting charge.",
       note: "3 Na+ out, 2 K+ in",
-      emoji: "\uD83D\uDEAA"
+      emoji: "🚪"
     },
     {
       id: 102,
@@ -35,7 +35,7 @@ export default function RecallRoundPage() {
       title: "Kitchen Counter: Rapid Na+ Influx",
       keyPoint: "Threshold stimulus (-55mV) opens voltage-gated Na+ channels.",
       note: "Sparks on the kitchen marble",
-      emoji: "\u26A1"
+      emoji: "⚡"
     },
     {
       id: 103,
@@ -44,7 +44,7 @@ export default function RecallRoundPage() {
       title: "Living Room Rug: Saltatory Conduction",
       keyPoint: "Impulses jump between Nodes of Ranvier along myelinated axon.",
       note: "Leaping over rug circles",
-      emoji: "\uD83C\uDFC3"
+      emoji: "🏃"
     }
   ]);
 
@@ -147,7 +147,7 @@ export default function RecallRoundPage() {
                 : 'bg-amber-500/90 text-white animate-pulse'
             }`}
           >
-            <span className="text-xl">{isRevealed ? currentFlag.emoji : '\u2753'}</span>
+            <span className="text-xl">{isRevealed ? currentFlag.emoji : '❓'}</span>
           </motion.div>
         </div>
 

@@ -78,7 +78,7 @@ export default function ExplainRecordPage() {
       <div>
         <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase mb-1">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span>Teach It Back \u00B7 Active Recall Loop</span>
+          <span>Teach It Back · Active Recall Loop</span>
         </div>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
           {stage === 'setup' ? 'Setup Your Explanation' : 'Explain Aloud to Gemini'}
