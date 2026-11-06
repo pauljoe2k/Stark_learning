@@ -1,5 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" keeps local dev working; rhel-openssl-3.0.x is what Vercel's
+  // Node runtime (Amazon Linux 2023) needs. Without the second target the
+  // client has no engine for the Lambda platform and every query fails at
+  // runtime with "could not locate the Query Engine for runtime
+  // rhel-openssl-3.0.x" — while the build itself still passes.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
