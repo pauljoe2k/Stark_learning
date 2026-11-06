@@ -22,20 +22,22 @@ const uploadsDirectory = fileURLToPath(new URL('../uploads/', import.meta.url));
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow server-to-server or tools with no origin
+    // Allow server-to-server calls and tools that send no Origin (curl, health checks).
     if (!origin) return callback(null, true);
-    // Allow any .vercel.app origin, localhost, or configured CLIENT_URL
+
+    // CLIENT_URL unset or '*' keeps the permissive behaviour for local work.
     const clientUrl = process.env.CLIENT_URL;
-    if (
+    const allowed =
       !clientUrl ||
       clientUrl === '*' ||
       origin === clientUrl ||
       /\.vercel\.app$/.test(origin) ||
-      /localhost/.test(origin)
-    ) {
-      return callback(null, true);
-    }
-    return callback(null, true);
+      /localhost|127\.0\.0\.1/.test(origin);
+
+    // This callback used to end in `callback(null, true)` on every path, so the
+    // allowlist above it was decorative and any origin was accepted with
+    // credentials enabled.
+    return callback(allowed ? null : new Error(`Origin not allowed: ${origin}`), allowed);
   },
   credentials: true,
 }));
