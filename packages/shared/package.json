@@ -15,7 +15,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/**/*.test.ts"
+    "test": "tsx --test test/schemas.test.ts test/socket.test.ts"
   },
   "dependencies": {
     "zod": "^3.24.2"
