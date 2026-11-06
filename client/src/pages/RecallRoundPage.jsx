@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Check, 
   X, 
@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function RecallRoundPage() {
   const { roundId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Flags to recall
   const [flags] = useState([
@@ -50,8 +51,9 @@ export default function RecallRoundPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [results, setResults] = useState([]); // { flagId, recalled: boolean, timeTaken: number }
-  const [timeLeft, setTimeLeft] = useState(15);
-  const timeLimit = 15;
+  // Honour the time the student picked on Recall Setup (?time=10|15|30|45).
+  const timeLimit = Number(searchParams.get('time')) || 15;
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
 
   const currentFlag = flags[currentIndex];
 
@@ -83,6 +85,14 @@ export default function RecallRoundPage() {
       navigate(`/recall/${roundId}/summary`, { state: { results: newResults } });
     }
   };
+
+  // A timeout counts as not recalled (PRD FR-6.4): grade red the moment the clock
+  // hits zero instead of leaving the pin sitting there forever.
+  useEffect(() => {
+    if (!isRevealed && timeLeft === 0) {
+      handleGrade(false);
+    }
+  }, [timeLeft, isRevealed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const circumference = 2 * Math.PI * 32;
   const strokeOffset = circumference - ((timeLimit - timeLeft) / timeLimit) * circumference;
@@ -242,4 +252,3 @@ export default function RecallRoundPage() {
     </div>
   );
 }
-

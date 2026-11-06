@@ -45,18 +45,19 @@ export default function ExplainRecordPage() {
     startListening();
   };
 
-  // Timer countdown effect
+  // Countdown runs off `stage` alone. Pausing the mic, switching tabs, or a browser
+  // without SpeechRecognition must not freeze the clock (PRD FR-4.1).
   useEffect(() => {
-    let timer;
-    if (stage === 'recording' && isListening && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && stage === 'recording') {
+    if (stage !== 'recording') return;
+    if (timeLeft <= 0) {
       stopListening();
+      return;
     }
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
     return () => clearInterval(timer);
-  }, [stage, isListening, timeLeft, stopListening]);
+  }, [stage, timeLeft, stopListening]);
 
   const handleSubmitExplanation = () => {
     setIsSubmitting(true);
@@ -230,6 +231,8 @@ export default function ExplainRecordPage() {
                 type="button"
                 onClick={() => {
                   stopListening();
+                  setTranscript('');
+                  setTimeLeft(selectedDuration);
                   setStage('setup');
                 }}
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:bg-muted"
@@ -263,4 +266,3 @@ export default function ExplainRecordPage() {
     </div>
   );
 }
-
