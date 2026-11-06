@@ -19,11 +19,12 @@ export default function ExplainResultPage() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    // Subtle celebratory confetti if score is high
+    // Celebrate only a passing attempt (pass mark 70%) \u2014 not a 63%.
+    if (result.score < 70) return;
     try {
       confetti({ particleCount: 30, spread: 60, origin: { y: 0.7 } });
     } catch (e) {}
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mock Result matching README API specification
   const result = {
@@ -94,7 +95,7 @@ export default function ExplainResultPage() {
               <span className="text-xs text-muted-foreground">Target: 70% Pass</span>
             </div>
             <h1 className="font-display text-2xl font-bold text-foreground">
-              {result.score >= 70 ? 'Topic Mastered! 🎉' : 'Keep Going! Gaps Identified'}
+              {result.score >= 70 ? 'Topic Mastered! \uD83C\uDF89' : 'Keep Going! Gaps Identified'}
             </h1>
             <p className="text-xs text-muted-foreground mt-1 max-w-lg leading-relaxed">
               {result.summary}
@@ -174,4 +175,3 @@ export default function ExplainResultPage() {
     </div>
   );
 }
-

@@ -45,18 +45,19 @@ export default function ExplainRecordPage() {
     startListening();
   };
 
-  // Timer countdown effect
+  // Countdown runs off `stage` alone. Pausing the mic, switching tabs, or a browser
+  // without SpeechRecognition must not freeze the clock (PRD FR-4.1).
   useEffect(() => {
-    let timer;
-    if (stage === 'recording' && isListening && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && stage === 'recording') {
+    if (stage !== 'recording') return;
+    if (timeLeft <= 0) {
       stopListening();
+      return;
     }
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
     return () => clearInterval(timer);
-  }, [stage, isListening, timeLeft, stopListening]);
+  }, [stage, timeLeft, stopListening]);
 
   const handleSubmitExplanation = () => {
     setIsSubmitting(true);
@@ -77,7 +78,7 @@ export default function ExplainRecordPage() {
       <div>
         <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase mb-1">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span>Teach It Back · Active Recall Loop</span>
+          <span>Teach It Back \u00B7 Active Recall Loop</span>
         </div>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
           {stage === 'setup' ? 'Setup Your Explanation' : 'Explain Aloud to Gemini'}
@@ -230,6 +231,8 @@ export default function ExplainRecordPage() {
                 type="button"
                 onClick={() => {
                   stopListening();
+                  setTranscript('');
+                  setTimeLeft(selectedDuration);
                   setStage('setup');
                 }}
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:bg-muted"
@@ -263,4 +266,3 @@ export default function ExplainRecordPage() {
     </div>
   );
 }
-
