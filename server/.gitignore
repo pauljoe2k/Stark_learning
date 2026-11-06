@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Uploads staged locally before going to storage
+uploads/
+tmp/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local database dumps
+*.sqlite
+*.sqlite3
+dumps/

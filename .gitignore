@@ -1,13 +1,30 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+client/dist/
+apps/*/dist/
+packages/*/dist/
+client/.vite/
+apps/web/.vite/
+
+# Environment — never commit secrets
 .env
 .env.*
 !.env.example
+
+# Local runtime artefacts, logs and scratch dirs
+logs/
+*.log
+.tmp-*
+*.tmp
+tmp/
+
+# Uploads staged locally before going to Cloudinary / local storage
 server/uploads/
 apps/api/uploads/
-logs/
-client/.vite/
+
+# Coverage and test output
 coverage/
-apps/*/dist/
-packages/*/dist/
-apps/web/.vite/
+.nyc_output/
