@@ -1,9 +1,9 @@
 import { PDFDocument } from 'pdf-lib';
 import { HttpError } from '../errors.js';
 
-export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
-export const MAX_TOPIC_PAGES = 2;
-export const MAX_TOPIC_IMAGES = 2;
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+export const MAX_TOPIC_PAGES = 100;
+export const MAX_TOPIC_IMAGES = 20;
 
 export type SupportedMediaType = 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp';
 
@@ -47,12 +47,12 @@ export async function validateUploadedFile(
 
   const existingPageCount = existingFiles.reduce((sum, file) => sum + file.pageCount, 0);
   if (existingPageCount + pageCount > MAX_TOPIC_PAGES) {
-    throw new HttpError(400, 'A topic can contain a maximum of two pages in total.', 'PAGE_LIMIT_EXCEEDED');
+    throw new HttpError(400, `A topic can contain a maximum of ${MAX_TOPIC_PAGES} pages in total.`, 'PAGE_LIMIT_EXCEEDED');
   }
 
   const imageCount = existingFiles.filter((file) => file.type.startsWith('image/')).length;
   if (mediaType.startsWith('image/') && imageCount >= MAX_TOPIC_IMAGES) {
-    throw new HttpError(400, 'A topic can contain a maximum of two images.', 'IMAGE_LIMIT_EXCEEDED');
+    throw new HttpError(400, `A topic can contain a maximum of ${MAX_TOPIC_IMAGES} images.`, 'IMAGE_LIMIT_EXCEEDED');
   }
 
   return { mediaType, pageCount };

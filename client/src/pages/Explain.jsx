@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, CircleHelp, Mic, MicOff, RotateCcw, Send, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, CircleHelp, LoaderCircle, Mic, MicOff, RotateCcw, Send, Sparkles } from 'lucide-react';
 import { useSpeech } from '../hooks/useSpeech.js';
 import { useTopics, useExplainTopic, usePinGaps, useExplanations } from '../hooks/useStudy.js';
 import { usePlaces } from '../hooks/usePlaces.js';
@@ -50,8 +50,19 @@ export default function Explain() {
 
   useEffect(() => () => window.clearInterval(intervalRef.current), []);
 
+  const isActivelyRecording = recording || speech.listening;
+
+  // Keep interval timer in sync with speech state
+  useEffect(() => {
+    if (!speech.listening && recording && !speech.isProcessing) {
+      window.clearInterval(intervalRef.current);
+      setRecording(false);
+    }
+  }, [speech.listening, recording, speech.isProcessing]);
+
   function startTimer() {
     window.clearInterval(intervalRef.current);
+    speech.clear();
     setRemaining(duration);
     setRecording(true);
     speech.start();
@@ -138,26 +149,69 @@ export default function Explain() {
               {[60, 120, 180, 300].map((value) => <option key={value} value={value}>{value / 60} {value === 60 ? 'minute' : 'minutes'}</option>)}
             </select>
           </label>
-          <div className="mt-5 rounded-2xl bg-ink p-5 text-center text-white">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Time remaining</p>
-            <p role="timer" className="mt-1 text-5xl font-bold tabular-nums">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</p>
-            {recording ? (
-              <button type="button" onClick={stopTimer} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 font-semibold text-ink"><MicOff size={18} /> Stop recording</button>
+          <div className="mt-5 rounded-2xl bg-[#171613] p-6 text-center text-white border border-slate-750 shadow-md">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+              {speech.isProcessing ? 'Transcribing…' : isActivelyRecording ? 'Recording explanation…' : 'Speaking time'}
+            </p>
+            <p role="timer" className="my-2 text-5xl font-bold tabular-nums text-white">
+              {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}
+            </p>
+            {isActivelyRecording && (
+              <p className="mt-1 text-xs font-medium text-emerald-400 animate-pulse">
+                {speech.mode === 'speech' ? '🟢 Live streaming speech to text…' : '🎙️ Live recording audio…'}
+              </p>
+            )}
+            {speech.isProcessing ? (
+              <div className="mt-4 inline-flex items-center justify-center gap-2.5 rounded-xl bg-white/10 border border-white/20 px-6 py-3 text-sm font-semibold text-white shadow-inner">
+                <LoaderCircle className="animate-spin text-emerald-400" size={20} />
+                <span>Transcribing with AI…</span>
+              </div>
+            ) : isActivelyRecording ? (
+              <button
+                type="button"
+                onClick={stopTimer}
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 px-6 py-3 text-base font-bold text-white shadow-lg shadow-red-950/40 transition cursor-pointer animate-pulse"
+              >
+                <MicOff size={20} className="text-white" />
+                <span>Stop recording</span>
+              </button>
             ) : (
-              <button type="button" onClick={startTimer} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 font-semibold text-ink"><Mic size={18} /> Start speaking</button>
+              <button
+                type="button"
+                onClick={startTimer}
+                disabled={speech.isProcessing}
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-950/40 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Mic size={20} className="text-white" />
+                <span>Start speaking</span>
+              </button>
             )}
           </div>
-          {!speech.supported && <p className="mt-3 inline-flex items-start gap-2 text-sm text-slate-600"><CircleHelp className="mt-0.5 shrink-0" size={17} />Voice input is not supported in this browser. Type your explanation below.</p>}
-          {speech.error && <p role="status" className="mt-3 text-sm text-amber-900">{speech.error}</p>}
+          {speech.isProcessing && <p className="mt-3 text-sm text-moss font-semibold animate-pulse">Transcribing speech with Gemini AI…</p>}
+          {!speech.supported && <p className="mt-3 inline-flex items-start gap-2 text-sm text-slate-600"><CircleHelp className="mt-0.5 shrink-0" size={17} />Microphone access is not available in this browser or over unencrypted HTTP. Open in Google Chrome, Microsoft Edge, or type your explanation below.</p>}
+          {speech.supported && speech.mode === 'recorder' && (
+            <p className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+              💡 <strong>Pro tip:</strong> For instantaneous word-by-word streaming typing in real time, open this page in <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong>.
+            </p>
+          )}
+          {speech.error && <p role="status" className="mt-3 text-sm text-amber-900 bg-amber-50 p-2.5 rounded-lg">{speech.error}</p>}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
           <form onSubmit={submit}>
-            <label htmlFor="explanation-transcript" className="block text-lg font-bold">Your explanation</label>
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="explanation-transcript" className="block text-lg font-bold">Your explanation</label>
+              {isActivelyRecording && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-sm animate-pulse">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  Listening live…
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-sm text-slate-600">Aim for at least 15 words. Review and edit the transcript before you submit.</p>
             <textarea id="explanation-transcript" required rows={10} value={speech.transcript} onChange={(event) => speech.setTranscript(event.target.value)} placeholder="Explain the topic as if you were teaching a friend…" className="mt-4 block w-full resize-y rounded-xl border border-slate-300 px-3 py-3 leading-6" />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-xs text-slate-500">{speech.transcript.trim().split(/\s+/).filter(Boolean).length} words</span>
+              <span className="text-xs text-slate-500">{(speech.transcript || '').trim().split(/\s+/).filter(Boolean).length} words</span>
               <button type="submit" disabled={explain.isPending || recording} className="inline-flex items-center gap-2 rounded-xl bg-moss px-4 py-2.5 font-semibold text-white hover:bg-ink disabled:opacity-50">
                 <Sparkles aria-hidden="true" size={17} /> {explain.isPending ? 'Checking…' : 'Check my explanation'}
               </button>

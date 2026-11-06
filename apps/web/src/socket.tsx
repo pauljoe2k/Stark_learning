@@ -10,7 +10,7 @@ interface SocketContextValue {
 }
 
 const SocketContext = createContext<SocketContextValue>({ socket: null, status: 'offline' });
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();

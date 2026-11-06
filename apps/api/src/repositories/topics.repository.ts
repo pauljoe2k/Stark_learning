@@ -103,10 +103,10 @@ export class PrismaTopicsRepository {
       if (existing.some((file) => file.fileUrl === input.fileUrl)) {
         return { status: 'duplicate' as const };
       }
-      if (existing.reduce((sum, file) => sum + file.pageCount, 0) + input.pageCount > 2) {
+      if (existing.reduce((sum, file) => sum + file.pageCount, 0) + input.pageCount > 100) {
         return { status: 'page_limit' as const };
       }
-      if (input.type.startsWith('image/') && existing.filter((file) => file.type.startsWith('image/')).length >= 2) {
+      if (input.type.startsWith('image/') && existing.filter((file) => file.type.startsWith('image/')).length >= 20) {
         return { status: 'image_limit' as const };
       }
       return {

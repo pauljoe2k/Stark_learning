@@ -139,7 +139,7 @@ export default function Topic() {
       <header className="mb-7">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-moss">Step 1 · Learn the material</p>
         <h1 className="mt-1 text-3xl font-bold">Topics & notes</h1>
-        <p className="mt-2 text-slate-600">Add a topic, then upload up to two pages of notes for key-point extraction.</p>
+        <p className="mt-2 text-slate-600">Add a topic, then upload PDFs or images of notes for key-point extraction.</p>
       </header>
       <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -167,8 +167,8 @@ export default function Topic() {
             </label>
             <label className="block rounded-xl border border-dashed border-slate-300 p-3 text-sm text-slate-600">
               <span className="inline-flex items-center gap-2 font-semibold text-ink"><FilePlus2 size={17} /> Add PDF or images</span>
-              <span className="mt-1 block">Maximum two pages total. Select one PDF or up to two images.</span>
-              <input type="file" accept="application/pdf,image/*" multiple className="mt-2 block w-full text-sm" onChange={(event) => setSelectedFiles([...event.target.files].slice(0, 2))} />
+              <span className="mt-1 block">Upload PDFs or images (up to 100 pages total).</span>
+              <input type="file" accept="application/pdf,image/*" multiple className="mt-2 block w-full text-sm" onChange={(event) => setSelectedFiles([...event.target.files].slice(0, 10))} />
             </label>
             {selectedFiles.length > 0 && <p className="text-xs text-slate-500">{selectedFiles.map((file) => file.name).join(', ')}</p>}
             <button type="submit" disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-moss px-4 py-2.5 font-semibold text-white hover:bg-ink disabled:opacity-50">
@@ -212,7 +212,7 @@ export default function Topic() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="font-semibold">Key points ({keyPoints.length})</h3>
-                  <button type="button" onClick={() => setKeyPoints((items) => [...items, { id: Math.max(0, ...items.map((item) => Number(item.id))) + 1, text: '' }])} disabled={keyPoints.length >= 8} className="inline-flex items-center gap-1 text-sm font-semibold text-moss disabled:opacity-40"><Plus size={16} /> Add point</button>
+                  <button type="button" onClick={() => setKeyPoints((items) => [...items, { id: Math.max(0, ...items.map((item) => Number(item.id))) + 1, text: '' }])} disabled={keyPoints.length >= 50} className="inline-flex items-center gap-1 text-sm font-semibold text-moss disabled:opacity-40"><Plus size={16} /> Add point</button>
                 </div>
                 <ol className="space-y-2">
                   {keyPoints.map((point, index) => <li key={point.id} className="flex items-start gap-2">
@@ -225,10 +225,10 @@ export default function Topic() {
               </div>
               <div className="rounded-xl bg-paper p-3">
                 <p className="text-sm font-semibold">Study material</p>
-                <p className="mt-1 text-xs text-slate-600">{selectedQuery.data.topicFiles?.length ? `${selectedQuery.data.topicFiles.reduce((sum, file) => sum + file.pageCount, 0)} of 2 pages used` : 'No files uploaded yet.'}</p>
+                <p className="mt-1 text-xs text-slate-600">{selectedQuery.data.topicFiles?.length ? `${selectedQuery.data.topicFiles.reduce((sum, file) => sum + file.pageCount, 0)} pages uploaded` : 'No files uploaded yet.'}</p>
                 <div className="mt-3 flex flex-wrap items-end gap-2">
                   <label className="min-w-0 flex-1 text-xs font-medium">Add or replace source material
-                    <input type="file" accept="application/pdf,image/*" multiple className="mt-1 block w-full text-xs" onChange={(event) => setSelectedFiles([...event.target.files].slice(0, 2))} />
+                    <input type="file" accept="application/pdf,image/*" multiple className="mt-1 block w-full text-xs" onChange={(event) => setSelectedFiles([...event.target.files].slice(0, 10))} />
                   </label>
                   <button type="button" onClick={uploadMore} disabled={busy || !selectedFiles.length} className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"><Upload size={15} /> Analyze</button>
                 </div>

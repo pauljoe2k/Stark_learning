@@ -14,7 +14,7 @@ export const imageUpload = multer({
 
 export const materialUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 12 * 1024 * 1024, files: 2 },
+  limits: { fileSize: 50 * 1024 * 1024, files: 20 },
   fileFilter(_req, file, callback) {
     if (file.mimetype !== 'application/pdf' && !file.mimetype.startsWith('image/')) {
       return callback(new HttpError(400, 'Upload a PDF or image file.'));

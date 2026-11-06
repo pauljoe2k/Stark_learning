@@ -34,12 +34,17 @@ export function SessionProvider({ children }) {
   }, []);
 
   const authenticate = useCallback(async (action, data) => {
-    const result = await api.post(action === 'signup' ? endpoints.auth.signup() : endpoints.auth.login(), data);
-    localStorage.setItem(tokenKey, result.token);
-    localStorage.setItem(userKey, JSON.stringify(result.user));
-    localStorage.removeItem(loggedOutKey);
-    setUser(result.user);
-    return result.user;
+    let url = endpoints.auth.login();
+    if (action === 'signup') url = endpoints.auth.signup();
+    else if (action === 'reset') url = endpoints.auth.resetPassword();
+    const result = await api.post(url, data);
+    if (result.token && result.user) {
+      localStorage.setItem(tokenKey, result.token);
+      localStorage.setItem(userKey, JSON.stringify(result.user));
+      localStorage.removeItem(loggedOutKey);
+      setUser(result.user);
+    }
+    return result.user || result;
   }, []);
 
   const logout = useCallback(() => {
@@ -54,6 +59,7 @@ export function SessionProvider({ children }) {
     ready,
     login: (data) => authenticate('login', data),
     signup: (data) => authenticate('signup', data),
+    resetPassword: (data) => authenticate('reset', data),
     logout,
   }), [user, ready, authenticate, logout]);
 
