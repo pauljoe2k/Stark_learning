@@ -59,9 +59,9 @@ const fakeExtraction = (filename) => ({
 
 export const mockApi = {
   async request(method, path, data) {
-    if (path === '/auth/login' || path === '/auth/signup') {
+    if (path === '/auth/login' || path === '/auth/signup' || path === '/auth/reset-password' || path === '/auth/forgot-password') {
       if (data?.email) currentUser = { ...currentUser, email: data.email, name: data.name || currentUser.name };
-      return { user: clone(currentUser), token: 'mock-access-token' };
+      return { user: clone(currentUser), token: 'mock-access-token', message: 'Password reset successfully.' };
     }
     if (path === '/auth/me') {
       if (method === 'PATCH') Object.assign(currentUser, clone(data));
@@ -112,7 +112,7 @@ export const mockApi = {
         if (!files.length) throw new Error('Choose at least one PDF or image.');
         const addedPages = files.reduce((sum, file) => sum + (file.type === 'application/pdf' ? 2 : 1), 0);
         const existingPages = topic.topicFiles.reduce((sum, file) => sum + file.pageCount, 0);
-        if (existingPages + addedPages > 2) throw new Error('A topic can contain no more than two pages total.');
+        if (existingPages + addedPages > 100) throw new Error('A topic can contain no more than 100 pages total.');
         const file = files[0];
         const extraction = fakeExtraction(file?.name);
         topic.title = extraction.title;

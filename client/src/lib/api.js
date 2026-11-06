@@ -1,7 +1,7 @@
 import { mockApi } from './mockApi.js';
 
 const useMock = import.meta.env.VITE_USE_MOCK === 'true';
-const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/+$/, '');
+const baseUrl = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '');
 
 async function request(method, path, data) {
   if (useMock) return mockApi.request(method, path, data);

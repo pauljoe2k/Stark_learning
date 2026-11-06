@@ -12,6 +12,7 @@ import PlaceView from './pages/PlaceView.jsx';
 import Recall from './pages/Recall.jsx';
 import Login from './pages/Login.jsx';
 import { LogOut } from 'lucide-react';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,15 +60,17 @@ function AuthenticatedApp() {
       <BottomBar />
       <div className="app-layout mx-auto max-w-[1500px] gap-7 px-0 sm:px-5 lg:px-8">
         <div key={location.pathname} className="min-w-0 flex-1 page-enter">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/topic" element={<Topic />} />
-            <Route path="/explain" element={<Explain />} />
-            <Route path="/palace" element={<Palace />} />
-            <Route path="/palace/:id" element={<PlaceView />} />
-            <Route path="/recall" element={<Recall />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/topic" element={<Topic />} />
+              <Route path="/explain" element={<Explain />} />
+              <Route path="/palace" element={<Palace />} />
+              <Route path="/palace/:id" element={<PlaceView />} />
+              <Route path="/recall" element={<Recall />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ErrorBoundary>
         </div>
         <ExamCalendar />
       </div>

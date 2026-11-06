@@ -1,7 +1,7 @@
 export function extractionPrompt() {
   return `Read the supplied study material and return JSON only with this exact shape:
 {"title":"short topic title","notes":"concise study summary","keyPoints":[{"id":1,"text":"one clear idea"}]}
-Include 5 to 8 important, factual key points. Assign stable numeric ids 1 through 8. Do not invent facts not present in the material.`;
+Extract the most important, factual key points (generate up to 30 key points if the material is comprehensive, minimum 5). Assign stable numeric ids sequentially starting from 1. Do not invent facts not present in the material.`;
 }
 
 export function explanationPrompt(topic, transcript) {

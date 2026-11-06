@@ -7,8 +7,8 @@ export const keyPointSchema = z.object({
 
 export const extractionSchema = z.object({
   title: z.string().trim().min(1).max(160),
-  notes: z.string().trim().max(8000),
-  keyPoints: z.array(keyPointSchema).min(5).max(8),
+  notes: z.string().trim().max(50000),
+  keyPoints: z.array(keyPointSchema).min(5).max(50),
 });
 
 export const explanationSchema = z.object({

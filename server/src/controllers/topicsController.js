@@ -111,8 +111,9 @@ export async function uploadTopicFiles(req, res) {
   if (!files.length) throw new HttpError(400, 'Choose at least one PDF or image.');
   const newPages = await Promise.all(files.map(pageCount));
   const existingPages = topic.topicFiles.reduce((sum, item) => sum + item.pageCount, 0);
-  if (existingPages + newPages.reduce((sum, count) => sum + count, 0) > 2) {
-    throw new HttpError(400, 'A topic can contain no more than two pages total.');
+  const maxPages = Number(process.env.MAX_TOPIC_PAGES || 100);
+  if (existingPages + newPages.reduce((sum, count) => sum + count, 0) > maxPages) {
+    throw new HttpError(400, `A topic can contain no more than ${maxPages} pages total.`);
   }
 
   let extractions;
@@ -124,8 +125,8 @@ export async function uploadTopicFiles(req, res) {
   }
   const merged = extractionSchema.parse({
     title: extractions[0].title,
-    notes: extractions.map((item) => item.notes).filter(Boolean).join('\n\n').slice(0, 8000),
-    keyPoints: extractions.flatMap((item) => item.keyPoints).slice(0, 8).map((point, index) => ({
+    notes: extractions.map((item) => item.notes).filter(Boolean).join('\n\n').slice(0, 30000),
+    keyPoints: extractions.flatMap((item) => item.keyPoints).slice(0, 30).map((point, index) => ({
       id: index + 1,
       text: point.text,
     })),

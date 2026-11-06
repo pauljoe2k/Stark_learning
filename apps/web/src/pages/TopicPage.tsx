@@ -329,7 +329,7 @@ export function TopicPage() {
                   <div>
                     <span className="eyebrow">{topic.unit?.title ?? 'UNSORTED TOPIC'}</span>
                     <h2>{topic.title}</h2>
-                    <p>{topic.topicFiles.length} {topic.topicFiles.length === 1 ? 'file' : 'files'} · {pageCount}/2 pages</p>
+                    <p>{topic.topicFiles.length} {topic.topicFiles.length === 1 ? 'file' : 'files'} · {pageCount} pages</p>
                   </div>
                   <span className="topic-card-icon" aria-hidden="true"><FileText size={20} /></span>
                 </header>
@@ -419,10 +419,10 @@ export function TopicPage() {
                 <details className="add-material">
                   <summary><Upload size={17} aria-hidden="true" /> Add material</summary>
                   <CameraCapture
-                    disabled={isUploading || pageCount >= 2}
+                    disabled={isUploading || pageCount >= 100}
                     onSelect={(file) => void uploadFile(topic, file)}
                   />
-                  {pageCount >= 2 && <p className="camera-hint">This topic already has its two pages of material.</p>}
+                  {pageCount >= 100 && <p className="camera-hint">This topic has reached the 100-page limit.</p>}
                 </details>
               </article>
             );
