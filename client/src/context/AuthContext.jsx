@@ -4,16 +4,18 @@ import { authApi } from '../lib/api/index';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  // No phantom session: a fresh browser must be unauthenticated, or /login is
+  // unreachable (AuthLayout redirects authenticated users away from it).
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('pinpoint_user');
-    return saved ? JSON.parse(saved) : {
-      id: 1,
-      name: 'Alex Stark',
-      email: 'alex@pinpoint.study',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-    };
+    try {
+      const saved = localStorage.getItem('pinpoint_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      localStorage.removeItem('pinpoint_user');
+      return null;
+    }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('pinpoint_token') || 'demo-token');
+  const [token, setToken] = useState(() => localStorage.getItem('pinpoint_token') || null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
